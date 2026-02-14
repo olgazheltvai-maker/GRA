@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Супер-Бджілка: Trial Version</title>
+    <style>
+        :root {
+            --bee-yellow: #ffcc00;
+            --bee-black: #1a1a1a;
+            --sky-blue: #4facfe;
+            --grass-dark: #2d5a27;
+            --grass-light: #417a32;
+            --ui-bg: rgba(20, 40, 20, 0.95);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #111;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; touch-action: manipulation;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 960px; height: 540px;
+            transform-origin: center center;
+            flex-shrink: 0;
+        }
+
+        #game-stage {
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, var(--sky-blue) 0%, #87cefa 100%);
+            border: 6px solid #fff; border-radius: 20px;
+            overflow: hidden; position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+
+        /* --- ВОДЯНИЙ ЗНАК --- */
+        .watermark-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 150; pointer-events: none; opacity: 0.12;
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            transform: rotate(-15deg) scale(1.3);
+        }
+        .watermark-text { font-size: 35px; color: #000; display: flex; justify-content: center; align-items: center; }
+
+        /* --- ЧОРНИЙ ЕКРАН (ПАУЗА) --- */
+        #trial-interruption {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; color: #fff; z-index: 1000;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #trial-interruption h1 { font-size: 60px; margin: 0; color: #ff4400; }
+
+        /* --- ДЕКОРАЦІЇ --- */
+        .sun {
+            position: absolute; top: 20px; left: 40px;
+            width: 70px; height: 70px; background: #ffdd00; border-radius: 50%; z-index: 1;
+            animation: sunPulse 3s ease-in-out infinite alternate;
+        }
+        @keyframes sunPulse { from { box-shadow: 0 0 30px #ffdd00; transform: scale(1); } to { box-shadow: 0 0 70px #ffaa00; transform: scale(1.1); } }
+
+        .cloud {
+            position: absolute; background: rgba(255,255,255,0.4); border-radius: 50px; z-index: 2;
+            animation: cloudMove linear infinite;
+        }
+        .c1 { width: 100px; height: 35px; top: 30px; left: -150px; animation-duration: 30s; }
+        .c2 { width: 150px; height: 50px; top: 80px; left: -200px; animation-duration: 45s; }
+        @keyframes cloudMove { from { left: -200px; } to { left: 1100px; } }
+
+        /* --- ДЕРЕВА --- */
+        .tree { position: absolute; z-index: 4; transform-origin: bottom center; }
+        .tree-pine { width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 40px solid #0a1f0a; }
+        .tree-round { width: 30px; height: 30px; background: #0f2b0f; border-radius: 50%; }
+        .tree-round::after { content: ''; position: absolute; bottom: -10px; left: 12px; width: 6px; height: 12px; background: #1a120b; }
+
+        .hill { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 50% 50% 0 0; }
+        .hill-back { bottom: -80px; width: 1200px; height: 320px; background: var(--grass-dark); z-index: 3; }
+        .hill-front { bottom: -150px; width: 1350px; height: 350px; background: var(--grass-light); z-index: 5; }
+
+        .flower {
+            position: absolute; width: 16px; height: 16px; border-radius: 50%; z-index: 6;
+            animation: flowerPulse 2s ease-in-out infinite alternate;
+        }
+        .flower::after { content: ''; position: absolute; bottom: -12px; left: 7px; width: 2px; height: 14px; background: #0e2b0f; z-index: -1; }
+        @keyframes flowerPulse { from { transform: scale(0.8); opacity: 0.8; } to { transform: scale(1.3); opacity: 1; } }
+
+        /* --- БДЖОЛА --- */
+        #bee-hero {
+            position: absolute; left: 80px; top: 100px; z-index: 20;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .hover-anim { animation: beeHover 2.5s ease-in-out infinite alternate; }
+        @keyframes beeHover { from { transform: translateY(0); } to { transform: translateY(-35px); } }
+
+        .bee-body {
+            position: relative; width: 100px; height: 70px; background: var(--bee-yellow);
+            background-image: repeating-linear-gradient(90deg, transparent, transparent 18px, var(--bee-black) 18px, var(--bee-black) 36px);
+            border: 4px solid #000; border-radius: 40px 60px 60px 40px;
+        }
+        .eye { position: absolute; right: 15px; top: 12px; width: 10px; height: 10px; background: #000; border-radius: 50%; border: 2px solid #fff; }
+        .stinger { position: absolute; left: -12px; top: 28px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 18px solid #000; }
+        .wing { position: absolute; top: -25px; width: 40px; height: 35px; background: rgba(255, 255, 255, 0.8); border: 2px solid #fff; border-radius: 50%; transform-origin: bottom; animation: flap 0.1s infinite alternate; }
+        .wing-l { left: 20px; } .wing-r { left: 50px; animation-delay: 0.05s; }
+        @keyframes flap { from { transform: rotate(20deg); } to { transform: rotate(-40deg); } }
+
+        #bee-num { margin-top: 10px; font-size: 55px; color: #fff; text-shadow: 4px 4px 0 #000; }
+
+        /* --- ПАВУТИНА ТА ПАВУК --- */
+        #web-trap { position: absolute; top: 0; right: 0; width: 500px; height: 100%; z-index: 10; transition: all 0.6s; }
+        .spider-container {
+            position: absolute; top: 80px; right: 50px;
+            display: flex; flex-direction: column; align-items: center; z-index: 15;
+        }
+        .spider-emoji {
+            font-size: 140px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6));
+            animation: spiderShake 4s ease-in-out infinite alternate;
+        }
+        @keyframes spiderShake { from { transform: translateY(0); } to { transform: translateY(20px); } }
+        #spider-num {
+            font-size: 40px; color: #fff; font-weight: bold;
+            background: rgba(0,0,0,0.85); padding: 5px 20px; border-radius: 12px;
+            margin-top: -30px; border: 3px solid #fff;
+        }
+
+        /* --- ГОРИЗОНТАЛЬНА КЛАВІАТУРА --- */
+        #controls {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: var(--ui-bg); padding: 10px; border-top: 4px solid #fff;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            z-index: 200; border-radius: 0 0 16px 16px;
+        }
+        #display-code {
+            width: 100px; height: 50px; background: #fff; border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 28px; font-weight: bold; color: #222; border: 3px solid #000;
+        }
+        .keypad-row { display: flex; gap: 5px; }
+        .key {
+            width: 45px; height: 45px; background: #ffcc00; border: 3px solid #000;
+            border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 3px #b38f00; transition: 0.1s;
+        }
+        .key:active { transform: translateY(3px); box-shadow: none; }
+        .key.op { background: #ff4d4d; color: #fff; }
+        .key.clear { background: #444; color: #fff; }
+        
+        #btn-go {
+            height: 50px; background: #2ecc71; border: 3px solid #000;
+            border-radius: 10px; font-size: 20px; font-weight: bold; color: #fff;
+            cursor: pointer; box-shadow: 0 3px #1a7a43; padding: 0 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="trial-interruption">
+        <h1>ПРОБНА ВЕРСІЯ</h1>
+        <p style="font-size: 20px;">Гра продовжиться за мить...</p>
+    </div>
+
+    <div id="game-stage">
+        <div class="watermark-overlay" id="watermark"></div>
+
+        <div class="sun"></div>
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+        
+        <div class="hill hill-back"></div>
+        <div class="hill hill-front"></div>
+
+        <div id="bee-hero" class="hover-anim">
+            <div class="bee-body">
+                <div class="eye"></div>
+                <div class="stinger"></div>
+                <div class="wing wing-l"></div>
+                <div class="wing wing-r"></div>
+            </div>
+            <div id="bee-num">---</div>
+        </div>
+
+        <div id="web-trap">
+            <svg width="100%" height="100%" viewBox="0 0 500 540" preserveAspectRatio="none">
+                <g stroke="rgba(255,255,255,0.7)" stroke-width="2" fill="none">
+                    <line x1="500" y1="0" x2="350" y2="180" /><line x1="500" y1="540" x2="350" y2="180" />
+                    <line x1="100" y1="540" x2="350" y2="180" />
+                    <path d="M420,100 Q360,110 380,240 Q330,220 320,130" />
+                    <path d="M490,20 Q300,30 450,450" />
+                </g>
+            </svg>
+            <div class="spider-container">
+                <div class="spider-emoji">🕷️</div>
+                <div id="spider-num">---</div>
+            </div>
+        </div>
+
+        <div id="controls">
+            <div id="display-code"></div>
+            <div class="keypad-row">
+                <div class="key op" onclick="press('+')">+</div>
+                <div class="key op" onclick="press('-')">-</div>
+            </div>
+            <div class="keypad-row">
+                <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div>
+                <div class="key" onclick="press('3')">3</div><div class="key" onclick="press('4')">4</div>
+                <div class="key" onclick="press('5')">5</div>
+                <div class="key" onclick="press('6')">6</div><div class="key" onclick="press('7')">7</div>
+                <div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
+                <div class="key" onclick="press('0')">0</div>
+            </div>
+            <div class="keypad-row"><div class="key clear" onclick="press('C')">C</div></div>
+            <button id="btn-go" onclick="fire()">ВПЕРЕД!</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- МАСШТАБУВАННЯ ---
+    function scaleGame() {
+        const wrapper = document.getElementById('game-wrapper');
+        const scale = Math.min(window.innerWidth / 960, window.innerHeight / 540);
+        wrapper.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('load', scaleGame);
+    scaleGame();
+
+    // --- ГЕНЕРАЦІЯ ВОДЯНОГО ЗНАКУ ---
+    const watermark = document.getElementById('watermark');
+    for(let i=0; i<16; i++) {
+        const div = document.createElement('div');
+        div.className = 'watermark-text';
+        div.innerText = 'ПРОБНА ВЕРСІЯ';
+        watermark.appendChild(div);
+    }
+
+    // --- ТРІАЛЬНЕ ПЕРЕРИВАННЯ (15 сек) ---
+    setInterval(() => {
+        const screen = document.getElementById('trial-interruption');
+        screen.style.display = 'flex';
+        setTimeout(() => { screen.style.display = 'none'; }, 3000);
+    }, 15000);
+
+    // --- ПРИРОДА ТА ДЕРЕВА ---
+    const stage = document.getElementById('game-stage');
+    const hillFront = document.querySelector('.hill-front');
+
+    function getHorizonY(x) {
+        return 235 - Math.pow((x - 480), 2) * 0.00065;
+    }
+
+    // Створюємо дерева
+    for(let i=0; i<30; i++) {
+        const tree = document.createElement('div');
+        const x = Math.random() * 980 - 10;
+        const type = Math.random() > 0.6 ? 'tree-pine' : 'tree-round';
+        tree.className = `tree ${type}`;
+        tree.style.left = x + 'px';
+        tree.style.bottom = getHorizonY(x) + 'px';
+        tree.style.transform = `scale(${0.4 + Math.random() * 0.5})`;
+        tree.style.filter = `brightness(0.65)`;
+        stage.insertBefore(tree, hillFront); // Вставляємо ПЕРЕД переднім пагорбом
+    }
+
+    // Створюємо квіти
+    const colors = ['#ff4d4d', '#f1c40f', '#fff', '#9b59b6'];
+    for(let i=0; i<35; i++) {
+        const x = Math.random() * 920 + 20;
+        const flower = document.createElement('div');
+        flower.className = 'flower';
+        flower.style.left = x + 'px';
+        const hillY = 200 - Math.pow((x - 480), 2) / 1200;
+        flower.style.bottom = (Math.random() * (hillY - 40) + 20) + 'px';
+        flower.style.background = colors[Math.floor(Math.random()*colors.length)];
+        flower.style.animationDelay = Math.random() * 2 + 's';
+        stage.appendChild(flower);
+    }
+
+    // --- ЛОГІКА ГРИ ---
+    let currentInput = "";
+    let beeVal, spiderVal, target;
+
+    function press(key) {
+        if (key === 'C') currentInput = "";
+        else {
+            if ((key === '+' || key === '-') && (currentInput.includes('+') || currentInput.includes('-'))) return;
+            if (currentInput.length < 5) currentInput += key;
+        }
+        document.getElementById('display-code').innerText = currentInput;
+    }
+
+    function next() {
+        const bee = document.getElementById('bee-hero');
+        const web = document.getElementById('web-trap');
+        bee.style.transition = "none";
+        bee.style.left = "80px";
+        bee.classList.add('hover-anim');
+        web.style.opacity = "1";
+        web.style.transform = "scale(1)";
+        currentInput = "";
+        document.getElementById('display-code').innerText = "";
+
+        spiderVal = (Math.floor(Math.random() * 9) + 1) * 100;
+        let d = (Math.floor(Math.random() * 9) + 1) * 10;
+        if(Math.random() > 0.5) { beeVal = spiderVal + d; target = "-" + d; }
+        else { beeVal = spiderVal - d; target = "+" + d; }
+
+        document.getElementById('bee-num').innerText = beeVal;
+        document.getElementById('spider-num').innerText = spiderVal;
+    }
+
+    function fire() {
+        let val = currentInput;
+        if(!val.startsWith('+') && !val.startsWith('-') && val !== "") val = "+" + val;
+        if(val === target) {
+            const web = document.getElementById('web-trap');
+            const bee = document.getElementById('bee-hero');
+            web.style.transform = "translateX(250px) scale(1.6)";
+            web.style.opacity = "0";
+            setTimeout(() => {
+                bee.classList.remove('hover-anim');
+                bee.style.transition = "left 1.2s ease-in";
+                bee.style.left = "1100px";
+            }, 400);
+            setTimeout(next, 2200);
+        } else {
+            currentInput = "";
+            document.getElementById('display-code').innerText = "ERR";
+            setTimeout(() => { document.getElementById('display-code').innerText = ""; }, 500);
+        }
+    }
+    next();
+</script>
+
+</body>
+</html>
