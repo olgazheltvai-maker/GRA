@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Підводна Гра</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #4fc3f7, #0288d1);
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            touch-action: none;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 15px; 
+            flex-wrap: wrap; 
+            /* Додаємо плавний перехід для приховування кнопок під час чорного екрану */
+            transition: opacity 0.2s;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: max(15px, 1.8vw); 
+            background-color: #ffca28;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            color: #3e2723;
+            font-weight: bold;
+            box-shadow: 0 4px #c49000;
+            transition: all 0.1s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+        }
+
+        button:hover { background-color: #ffb300; }
+        button:active {
+            box-shadow: 0 1px #c49000;
+            transform: translateY(3px);
+        }
+
+        #prevButton {
+            background-color: #4dd0e1;
+            box-shadow: 0 4px #0097a7;
+        }
+        #prevButton:hover { background-color: #26c6da; }
+        #prevButton:active { box-shadow: 0 1px #0097a7; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="controls">
+        <button id="prevButton" style="display: none;">⬅ Назад</button>
+        <button id="nextButton">Спробувати інше ➡</button>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const nextButton = document.getElementById('nextButton');
+const prevButton = document.getElementById('prevButton'); 
+const controlsDiv = document.getElementById('controls');
+
+let GAME_WIDTH, GAME_HEIGHT;
+let L_WIDTH, L_HEIGHT, scale;
+
+function resizeCanvas() {
+    GAME_WIDTH = canvas.width = window.innerWidth;
+    GAME_HEIGHT = canvas.height = window.innerHeight;
+    
+    const minDim = Math.min(GAME_WIDTH, GAME_HEIGHT);
+    scale = minDim / 800; 
+    
+    L_WIDTH = GAME_WIDTH / scale;
+    L_HEIGHT = GAME_HEIGHT / scale;
+
+    const bottomLimit = Math.max(200, L_HEIGHT - 250);
+
+    mainFishes.forEach(f => {
+        if (f.x > L_WIDTH - f.width/2) f.x = L_WIDTH - f.width/2;
+        if (f.y > bottomLimit) f.y = bottomLimit;
+    });
+}
+
+const WORD_LIST = ["кіт", "дім", "сир", "ліс", "мак", "сон", "зуб", "ніс", "рік", "пес", "лев", "жук", "рак", "мир", "дуб"];
+WORD_LIST.sort(() => Math.random() - 0.5);
+
+let currentWordIndex = 0;
+let mainFishes = [];
+let bgFishes = [];
+let seaweeds = [];
+let bubbles = [];
+let gameState = 'PLAYING'; 
+let caughtFish = null;
+let hookY = -200;
+let hookX = 0;
+
+// НОВЕ: Змінні для "пробної версії"
+let nextTrialInterrupt = Date.now() + 15000; // Перше переривання через 15 сек
+let trialResumeTime = 0;
+let previousState = 'PLAYING'; // Щоб запам'ятати, що робила гра до переривання
+
+function scrambleWord(word) {
+    let arr = word.split('');
+    for(let i = arr.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    let scrambled = arr.join('');
+    return (scrambled === word) ? scrambleWord(word) : scrambled;
+}
+
+// --- КЛАС ВОДОРОСТІ ---
+class Seaweed {
+    constructor() {
+        this.relX = Math.random(); 
+        this.height = 150 + Math.random() * 250;
+        this.offset = Math.random() * Math.PI * 2;
+        this.speed = 0.001 + Math.random() * 0.002;
+    }
+    draw(time) {
+        const x = this.relX * L_WIDTH;
+        ctx.beginPath();
+        ctx.moveTo(x, L_HEIGHT);
+        for (let i = 1; i <= 10; i++) {
+            const y = L_HEIGHT - i * (this.height / 10);
+            const drift = Math.sin(time * this.speed + this.offset + i * 0.3) * (i * 5);
+            ctx.lineTo(x + drift, y);
+        }
+        ctx.strokeStyle = '#1b5e20';
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.strokeStyle = '#43a047';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+    }
+}
+
+// --- КЛАС БУЛЬБАШОК ---
+class Bubble {
+    constructor() {
+        this.reset();
+        this.y = Math.random() * L_HEIGHT;
+    }
+    reset() {
+        this.x = Math.random() * L_WIDTH;
+        this.y = L_HEIGHT + 20;
+        this.size = 5 + Math.random() * 12;
+        this.speed = 0.8 + Math.random() * 1.5;
+    }
+    update() {
+        if (gameState === 'TRIAL_PAUSE') return; // Завмирають на паузі
+        this.y -= this.speed;
+        if (this.y < -20) this.reset();
+    }
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.stroke();
+    }
+}
+
+// --- КЛАС ТІНЬОВИХ РИБОК ---
+class BackgroundFish {
+    constructor() {
+        this.reset();
+        this.x = Math.random() * L_WIDTH;
+    }
+    reset() {
+        this.width = 100 + Math.random() * 60;
+        this.height = this.width * 0.5;
+        this.x = Math.random() > 0.5 ? -200 : L_WIDTH + 200;
+        this.y = Math.random() * L_HEIGHT;
+        this.dx = (Math.random() * 0.3 + 0.1) * (this.x < 0 ? 1 : -1);
+        this.opacity = 0.05 + Math.random() * 0.08;
+    }
+    update() {
+        if (gameState === 'TRIAL_PAUSE') return; // Завмирають на паузі
+        this.x += this.dx;
+        if (this.x < -300 || this.x > L_WIDTH + 300) this.reset();
+    }
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.translate(this.x, this.y);
+        if (this.dx < 0) ctx.scale(-1, 1);
+        ctx.fillStyle = '#003366';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.width/2, this.height/2, 0, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// --- КЛАС ГОЛОВНИХ РИБОК ---
+class Fish {
+    constructor(text, isCorrect) {
+        this.text = text;
+        this.isCorrect = isCorrect;
+        this.width = 250; 
+        this.height = 150;
+        this.radius = 130; 
+        
+        this.x = 200 + Math.random() * (L_WIDTH - 400);
+        const bottomLimit = Math.max(200, L_HEIGHT - 250);
+        this.y = 150 + Math.random() * Math.max(50, (bottomLimit - 150));
+        
+        this.dx = (Math.random() - 0.5) * 0.8; 
+        this.dy = (Math.random() - 0.5) * 0.5;
+        const colors = ['#ff9800', '#ff5722', '#fdd835', '#fb8c00', '#ec407a'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        
+        this.shakeTime = 0; 
+    }
+
+    update() {
+        if (gameState !== 'PLAYING') return; 
+        
+        if (this.shakeTime > 0) this.shakeTime--;
+
+        this.x += this.dx;
+        this.y += this.dy;
+
+        if (this.x < this.width/2) { this.x = this.width/2; this.dx *= -1; }
+        if (this.x > L_WIDTH - this.width/2) { this.x = L_WIDTH - this.width/2; this.dx *= -1; }
+        if (this.y < 120) { this.y = 120; this.dy *= -1; }
+        
+        const bottomLimit = Math.max(200, L_HEIGHT - 250);
+        if (this.y > bottomLimit) { 
+            this.y = bottomLimit; 
+            this.dy = -Math.abs(this.dy); 
+        }
+
+        mainFishes.forEach(other => {
+            if (other === this) return;
+            const dist = Math.hypot(this.x - other.x, this.y - other.y);
+            if (dist < this.radius * 2.1) {
+                const angle = Math.atan2(this.y - other.y, this.x - other.x);
+                this.dx = Math.cos(angle) * 0.8;
+                this.dy = Math.sin(angle) * 0.5;
+            }
+        });
+    }
+
+    draw() {
+        ctx.save();
+        
+        let drawX = this.x;
+        let drawY = this.y;
+        if (this.shakeTime > 0 && gameState === 'PLAYING') {
+            drawX += (Math.random() - 0.5) * 20;
+            drawY += (Math.random() - 0.5) * 20;
+        }
+
+        ctx.translate(drawX, drawY);
+        if (this.dx < 0) ctx.scale(-1, 1);
+        
+        ctx.fillStyle = this.shakeTime > 0 ? '#ff1744' : this.color;
+        
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(-this.width / 2, 0);
+        ctx.lineTo(-this.width / 2 - 50, -50);
+        ctx.lineTo(-this.width / 2 - 50, 50);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(this.width / 4, -this.height / 6, 14, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.fillStyle = 'black';
+        const pupilSize = this.shakeTime > 0 ? 3 : 7;
+        ctx.beginPath(); ctx.arc(this.width / 4 + 4, -this.height / 6, pupilSize, 0, Math.PI * 2); ctx.fill();
+        ctx.restore(); 
+
+        ctx.fillStyle = '#3e2723';
+        ctx.font = 'bold 64px "Comic Sans MS", Arial'; 
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.text, drawX, drawY);
+    }
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+for (let i = 0; i < 12; i++) seaweeds.push(new Seaweed());
+for (let i = 0; i < 20; i++) bubbles.push(new Bubble());
+for (let i = 0; i < 6; i++) bgFishes.push(new BackgroundFish());
+
+function updateButtons() {
+    if (gameState === 'GAME_OVER') {
+        nextButton.innerText = "Грати знову 🔄";
+        prevButton.style.display = 'block'; 
+    } else {
+        nextButton.innerText = "Спробувати інше ➡";
+        prevButton.style.display = currentWordIndex === 0 ? 'none' : 'block';
+    }
+}
+
+function startNewLevel() {
+    gameState = 'PLAYING';
+    caughtFish = null;
+    mainFishes = [];
+    hookY = -250;
+    
+    updateButtons(); 
+
+    let target = WORD_LIST[currentWordIndex];
+    let opts = [{t: target, c: true}, {t: scrambleWord(target), c: false}, {t: scrambleWord(target), c: false}];
+    opts.sort(() => Math.random() - 0.5);
+    opts.forEach(o => mainFishes.push(new Fish(o.t, o.c)));
+}
+
+function nextLevel() {
+    currentWordIndex++;
+    if (currentWordIndex >= WORD_LIST.length) {
+        gameState = 'GAME_OVER';
+        mainFishes = []; 
+        caughtFish = null;
+        hookY = -250;
+        updateButtons(); 
+    } else {
+        startNewLevel();
+    }
+}
+
+function handleInteraction(clientX, clientY) {
+    if (gameState !== 'PLAYING') return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (clientX - rect.left) / scale;
+    const my = (clientY - rect.top) / scale;
+
+    for (let fish of mainFishes) {
+        if (Math.hypot(mx - fish.x, my - fish.y) < fish.radius) {
+            if (fish.isCorrect) {
+                gameState = 'CATCHING_DOWN';
+                caughtFish = fish;
+                hookX = fish.x;
+            } else {
+                fish.shakeTime = 30; 
+                fish.dx = (fish.dx < 0 ? -1 : 1) * (Math.random() * 2 + 3);
+                fish.dy = (fish.dy < 0 ? -1 : 1) * (Math.random() * 2 + 3);
+            }
+            break; 
+        }
+    }
+}
+
+canvas.addEventListener('mousedown', (e) => handleInteraction(e.clientX, e.clientY));
+canvas.addEventListener('touchstart', (e) => {
+    handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive: true});
+
+prevButton.addEventListener('click', () => {
+    if (gameState === 'TRIAL_PAUSE') return; // Ігноруємо кліки під час паузи
+    if (gameState === 'GAME_OVER') {
+        currentWordIndex = WORD_LIST.length - 1;
+        startNewLevel();
+    } else if (currentWordIndex > 0) {
+        currentWordIndex--;
+        startNewLevel();
+    }
+});
+
+nextButton.addEventListener('click', () => {
+    if (gameState === 'TRIAL_PAUSE') return; // Ігноруємо кліки під час паузи
+    if (gameState === 'GAME_OVER') {
+        WORD_LIST.sort(() => Math.random() - 0.5); 
+        currentWordIndex = 0;
+        nextTrialInterrupt = Date.now() + 15000; // Скидаємо таймер при новій грі
+        startNewLevel();
+    } else {
+        nextLevel();
+    }
+});
+
+function draw() {
+    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    const time = Date.now();
+
+    // --- ЛОГІКА ПРОБНОЇ ВЕРСІЇ ---
+    if (gameState !== 'TRIAL_PAUSE' && gameState !== 'GAME_OVER') {
+        if (time > nextTrialInterrupt) {
+            previousState = gameState;
+            gameState = 'TRIAL_PAUSE';
+            trialResumeTime = time + 5000; // Пауза на 5 секунд
+            controlsDiv.style.visibility = 'hidden'; // Ховаємо кнопки
+        }
+    }
+
+    if (gameState === 'TRIAL_PAUSE') {
+        if (time >= trialResumeTime) {
+            gameState = previousState; // Повертаємо гру в попередній стан
+            nextTrialInterrupt = time + 15000; // Наступна пауза через 15 секунд
+            controlsDiv.style.visibility = 'visible'; // Повертаємо кнопки
+        }
+    }
+
+    ctx.save();
+    ctx.scale(scale, scale);
+
+    bgFishes.forEach(f => { f.update(); f.draw(); });
+    seaweeds.forEach(s => s.draw(time));
+    bubbles.forEach(b => { b.update(); b.draw(); });
+
+    mainFishes.forEach(f => { f.update(); f.draw(); });
+
+    // --- ВОДЯНИЙ ЗНАК (ШУМ) ---
+    // Малюємо його поверх рибок, але тільки якщо це не екран перемоги і не чорний екран
+    if (gameState !== 'GAME_OVER' && gameState !== 'TRIAL_PAUSE') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; // Напівпрозорий білий текст
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.rotate(-Math.PI / 8); // Текст під кутом
+        
+        let offset = (time / 30) % 350; // Робимо так, щоб текст повільно плив
+        for (let ix = -L_WIDTH; ix < L_WIDTH * 2; ix += 350) {
+            for (let iy = -L_HEIGHT; iy < L_HEIGHT * 2; iy += 150) {
+                ctx.fillText("ПРОБНА ВЕРСІЯ", ix + offset, iy);
+            }
+        }
+        ctx.restore();
+    }
+
+    // Відмальовка гачка
+    if ((gameState === 'CATCHING_DOWN' || gameState === 'CATCHING_UP') && caughtFish) {
+        ctx.beginPath();
+        ctx.moveTo(hookX, -10);
+        ctx.lineTo(hookX, hookY);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.fillStyle = 'red';
+        ctx.fillRect(hookX - 15, 20, 30, 25);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(hookX - 15, 45, 30, 25);
+
+        ctx.beginPath();
+        ctx.arc(hookX, hookY, 20, 0, Math.PI, false);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 7;
+        ctx.stroke();
+
+        if (gameState === 'CATCHING_DOWN') {
+            hookY += 18;
+            if (hookY >= caughtFish.y) gameState = 'CATCHING_UP';
+        } else if (gameState === 'CATCHING_UP') {
+            caughtFish.y -= 12;
+            hookY = caughtFish.y;
+            if (caughtFish.y < -250) {
+                nextLevel();
+            }
+        }
+    }
+    
+    // --- ЧОРНИЙ ЕКРАН ПЕРЕРИВАННЯ ---
+    if (gameState === 'TRIAL_PAUSE') {
+        ctx.fillStyle = 'black'; 
+        ctx.fillRect(0, 0, L_WIDTH, L_HEIGHT);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 60px "Comic Sans MS", Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("ПРОБНА ВЕРСІЯ", L_WIDTH / 2, L_HEIGHT / 2 - 40);
+        
+        let timeLeft = Math.ceil((trialResumeTime - time) / 1000);
+        ctx.font = 'bold 30px "Comic Sans MS", Arial';
+        ctx.fillText(`Гра продовжиться через ${timeLeft}...`, L_WIDTH / 2, L_HEIGHT / 2 + 40);
+    }
+
+    // --- ЕКРАН ПЕРЕМОГИ ---
+    if (gameState === 'GAME_OVER') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; 
+        ctx.fillRect(0, 0, L_WIDTH, L_HEIGHT);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 80px "Comic Sans MS", Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 5;
+        ctx.shadowOffsetY = 5;
+        
+        ctx.fillText("Молодець! 🎉", L_WIDTH / 2, L_HEIGHT / 2 - 60);
+        ctx.font = 'bold 50px "Comic Sans MS", Arial';
+        ctx.fillText("Всі слова пройдено", L_WIDTH / 2, L_HEIGHT / 2 + 40);
+        
+        ctx.shadowColor = 'transparent'; 
+    }
+    
+    ctx.restore();
+    requestAnimationFrame(draw);
+}
+
+startNewLevel();
+draw();
+</script>
+</body>
+</html>
