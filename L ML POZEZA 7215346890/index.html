@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Майстер Місткості: Пожежна Команда 1000 мл</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #1a1a1a;
+        font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+        overflow: hidden;
+        touch-action: none;
+    }
+
+    /* Обгортка для ідеального масштабування */
+    #game-wrapper {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1280px;
+        height: 720px;
+        transform-origin: center center;
+        background: linear-gradient(to bottom, #050a12, #1a3c5e, #345c85);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.9);
+    }
+
+    /* ФОН */
+    .bg-layer { position: absolute; width: 100%; height: 100%; z-index: 1; }
+    .moon {
+        position: absolute; top: 50px; right: 120px; width: 100px; height: 100px;
+        background: radial-gradient(circle at 30% 30%, #fffacd, #f1c40f);
+        border-radius: 50%; box-shadow: 0 0 50px rgba(241, 196, 15, 0.6), inset -10px -10px 20px rgba(0,0,0,0.2);
+    }
+    .stars {
+        position: absolute; width: 100%; height: 60%;
+        background-image: 
+            radial-gradient(2px 2px at 100px 100px, #fff, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 250px 150px, #fff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 400px 80px, #fff, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 600px 200px, #fff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 800px 60px, #fff, rgba(0,0,0,0)),
+            radial-gradient(3px 3px at 1000px 180px, #fff, rgba(0,0,0,0));
+    }
+    .ground-bg {
+        position: absolute; bottom: 0; width: 100%; height: 150px;
+        background: #192e24; border-top: 8px solid #0f1c16;
+    }
+
+    /* Пожежна машина */
+    .firetruck-bg {
+        position: absolute; bottom: 130px; left: 20px; width: 380px; height: 170px;
+        background: linear-gradient(to bottom, #c0392b, #922b21);
+        border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.4), inset 0 8px 0 rgba(255,255,255,0.2);
+    }
+    .firetruck-bg::after {
+        content: ''; position: absolute; top: 20px; right: 20px; width: 70px; height: 50px;
+        background: #87ceeb; border-radius: 8px; border: 4px solid #fff;
+    }
+    .wheel-bg {
+        position: absolute; bottom: -25px; width: 70px; height: 70px;
+        background: #2c3e50; border-radius: 50%; border: 8px solid #bdc3c7;
+    }
+    .wheel-bg.w1 { left: 40px; }
+    .wheel-bg.w2 { right: 40px; }
+
+    /* ГРА */
+    .game-layer { position: absolute; width: 100%; height: 100%; z-index: 2; }
+    .ground-fg {
+        position: absolute; bottom: 0; width: 100%; height: 110px;
+        background: linear-gradient(to bottom, #27ae60, #1e8449);
+        border-radius: 50% 50% 0 0 / 20px 20px 0 0; box-shadow: inset 0 15px 25px rgba(0,0,0,0.4);
+    }
+
+    /* БУДИНОК */
+    .house-complex {
+        position: absolute; bottom: 90px; right: 150px; width: 320px;
+        display: flex; flex-direction: column; align-items: center; z-index: 4;
+    }
+    .roof {
+        border-left: 190px solid transparent; border-right: 190px solid transparent; border-bottom: 130px solid #d35400;
+        filter: drop-shadow(8px 8px 10px rgba(0,0,0,0.6)); margin-bottom: -10px; z-index: 5; position: relative;
+    }
+    .roof::after {
+        content: ''; position: absolute; top: 30px; left: 50px; width: 35px; height: 70px;
+        background: #7b241c; border-radius: 3px;
+    }
+    .house {
+        width: 320px; height: 230px; background-color: #b03a2e;
+        background-image: linear-gradient(335deg, rgba(255,255,255,0.05) 23px, transparent 23px), linear-gradient(155deg, rgba(255,255,255,0.05) 23px, transparent 23px);
+        background-size: 46px 46px; background-position: 0px 0px, 4px 25px;
+        border: 8px solid #7b241c; border-radius: 5px; box-shadow: 15px 15px 40px rgba(0,0,0,0.6); position: relative;
+    }
+    .window {
+        position: absolute; top: 35px; width: 65px; height: 75px; background: radial-gradient(circle at center, #f1c40f, #d4ac0d);
+        border: 6px solid #ecf0f1; border-radius: 8px; box-shadow: inset 0 0 20px #e67e22, 0 5px 15px rgba(0,0,0,0.4);
+    }
+    .window::before { content: ''; position: absolute; background: #ecf0f1; top: 50%; left: 0; width: 100%; height: 6px; transform: translateY(-50%); }
+    .window::after { content: ''; position: absolute; background: #ecf0f1; left: 50%; top: 0; height: 100%; width: 6px; transform: translateX(-50%); }
+    .win1 { left: 40px; }
+    .win2 { right: 40px; }
+    .door {
+        position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 105px;
+        background: #5d4037; border: 6px solid #3e2723; border-bottom: none; border-radius: 15px 15px 0 0;
+    }
+    .door-knob {
+        position: absolute; top: 50%; right: 10px; width: 10px; height: 10px; background: #f1c40f; border-radius: 50%;
+    }
+
+    /* ПОЛУМ'Я */
+    #fire-container {
+        position: absolute; bottom: 70px; right: 170px; width: 280px; height: 220px;
+        display: flex; justify-content: center; align-items: flex-end;
+        transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 5; transform-origin: bottom center; pointer-events: none;
+    }
+    .flame {
+        position: absolute; bottom: 0; width: 80px; height: 80px; background: #f39c12;
+        border-radius: 50% 0 50% 50%; transform: rotate(-45deg); animation: flicker 0.4s infinite alternate; box-shadow: 0 0 35px rgba(230, 126, 34, 0.8);
+    }
+    .flame.f1 { left: 40px; background: #e74c3c; width: 130px; height: 130px; animation-duration: 0.5s; z-index: 2; }
+    .flame.f2 { left: 110px; background: #f1c40f; width: 110px; height: 110px; animation-duration: 0.3s; z-index: 3; }
+    .flame.f3 { right: 40px; background: #d35400; width: 100px; height: 100px; animation-duration: 0.45s; }
+
+    @keyframes flicker {
+        0% { transform: rotate(-45deg) scale(0.9) skew(5deg); opacity: 0.8; }
+        100% { transform: rotate(-45deg) scale(1.1) skew(-5deg); opacity: 1; }
+    }
+
+    @keyframes bigFireError {
+        0%, 100% { transform: scale(var(--current-scale)); }
+        10% { transform: scale(3.5); filter: brightness(2.2) saturate(1.8); } 
+        30% { transform: scale(2.8) rotate(-8deg); filter: brightness(1.8); } 
+        50% { transform: scale(3.2) rotate(8deg); } 
+        70% { transform: scale(3); } 
+    }
+
+    /* ШЛАНГ */
+    .hose-system {
+        position: absolute; bottom: 125px; left: -500px; 
+        width: 1100px; 
+        height: 28px;
+        background: #7f8c8d; border-radius: 14px; border-bottom: 6px solid #34495e;
+        transform: rotate(2deg); transform-origin: right center; 
+        z-index: 15; 
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .nozzle {
+        position: absolute; right: -30px; top: -8px; width: 40px; height: 45px;
+        background: #f1c40f; border-radius: 8px; border: 4px solid #d4ac0d; box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+    }
+
+    /* ПОЖЕЖНИК З АНІМАЦІЄЮ ДИХАННЯ */
+    .firefighter-solid {
+        position: absolute; bottom: 10px; 
+        left: 560px; 
+        width: 150px; height: 300px; 
+        z-index: 10;
+    }
+    
+    @keyframes breathe {
+        0%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(1.03) translateY(-2px); }
+    }
+
+    .ff-leg {
+        position: absolute; top: 190px; width: 38px; height: 75px;
+        background: #e67e22; border: 4px solid #d35400; border-radius: 10px; z-index: 1;
+    }
+    .ff-leg.left { left: 30px; }
+    .ff-leg.right { right: 30px; }
+    .ff-leg-stripe {
+        position: absolute; bottom: 15px; left: -4px; width: calc(100% + 8px); height: 12px;
+        background: #ecf0f1; border-top: 3px solid #bdc3c7; border-bottom: 3px solid #bdc3c7;
+    }
+    .ff-boot {
+        position: absolute; top: 260px; width: 55px; height: 35px;
+        background: #1c2833; border: 4px solid #0e1419; border-radius: 15px 15px 5px 5px; z-index: 2; box-shadow: 0 5px 5px rgba(0,0,0,0.5);
+    }
+    .ff-boot.left { left: 25px; }
+    .ff-boot.right { right: 25px; }
+
+    .ff-torso {
+        position: absolute; top: 100px; left: 25px; width: 100px; height: 110px;
+        background: #e67e22; border: 4px solid #d35400; border-radius: 35px 35px 10px 10px; z-index: 2; overflow: hidden;
+        animation: breathe 2s ease-in-out infinite;
+        transform-origin: bottom center;
+    }
+    .ff-torso-stripe {
+        position: absolute; top: 60px; left: 0; width: 100%; height: 20px;
+        background: #ecf0f1; border-top: 4px solid #bdc3c7; border-bottom: 4px solid #bdc3c7;
+    }
+
+    .ff-arm {
+        position: absolute; top: 130px; width: 35px; height: 75px;
+        background: #d35400; border: 4px solid #b34700; border-radius: 20px; z-index: 6; box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        animation: breathe 2s ease-in-out infinite;
+        transform-origin: top center;
+    }
+    .ff-arm.left { left: 10px; transform: rotate(15deg); }
+    .ff-arm.right { right: 10px; transform: rotate(-15deg); }
+    .ff-glove {
+        position: absolute; bottom: -15px; left: -10px; width: 45px; height: 45px;
+        background: #34495e; border: 4px solid #2c3e50; border-radius: 12px;
+    }
+
+    .ff-head-group { 
+        position: absolute; top: 0; left: 25px; width: 100px; height: 120px; z-index: 8; 
+        animation: breathe 2s ease-in-out infinite;
+        animation-delay: 0.1s;
+        transform-origin: bottom center;
+    }
+    
+    .ff-head {
+        position: absolute; top: 40px; left: 10px; width: 80px; height: 80px;
+        background: #f5cba7; border: 4px solid #e0ac81; border-radius: 40%; box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    }
+    .ff-eye { position: absolute; top: 25px; width: 12px; height: 12px; background: #2c3e50; border-radius: 50%; }
+    .ff-eye.l { left: 20px; }
+    .ff-eye.r { right: 20px; }
+    .ff-nose { position: absolute; top: 40px; left: 35px; width: 10px; height: 14px; background: #e0ac81; border-radius: 5px; }
+    .ff-mouth {
+        position: absolute; top: 58px; left: 25px; width: 30px; height: 10px;
+        background: #c0392b; border-radius: 0 0 15px 15px; border: 2px solid #a12f24;
+    }
+
+    .ff-helmet-top {
+        position: absolute; top: -5px; left: 5px; width: 90px; height: 55px;
+        background: #f1c40f; border: 4px solid #d4ac0d; border-radius: 45px 45px 10px 10px; box-shadow: inset -5px -10px 0 rgba(212, 172, 13, 0.5); z-index: 10;
+    }
+    .ff-helmet-brim {
+        position: absolute; top: 45px; left: -15px; width: 130px; height: 18px;
+        background: #2c3e50; border-radius: 12px; box-shadow: 0 5px 5px rgba(0,0,0,0.3); z-index: 11;
+    }
+
+    /* ІНТЕРФЕЙС ТА КНОПКИ */
+    .ui-layer {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20;
+        display: flex; flex-direction: column; align-items: center; pointer-events: none;
+    }
+    .top-panel { display: flex; align-items: center; justify-content: space-between; width: 85%; margin-top: 30px; pointer-events: auto; }
+    .nav-btn {
+        background: #3498db; color: white; border: 4px solid #2980b9; padding: 15px 30px; font-size: 24px; font-weight: bold;
+        border-radius: 15px; cursor: pointer; box-shadow: 0 8px 0 #1f618d, 0 5px 10px rgba(0,0,0,0.3); transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .nav-btn:active:not(:disabled) { transform: translateY(8px); box-shadow: 0 0 0 #1f618d; }
+    .nav-btn:disabled { background: #7f8c8d; border-color: #34495e; box-shadow: 0 8px 0 #2c3e50; opacity: 0.5; cursor: not-allowed; }
+
+    #task-board {
+        background: #ecf0f1; padding: 20px 60px; border-radius: 20px; border: 6px solid #8e44ad;
+        font-size: 50px; font-weight: bold; color: #2c3e50; box-shadow: 0 10px 0 #732d91, 0 15px 35px rgba(0,0,0,0.6); text-align: center; min-width: 450px;
+    }
+    #options-container { display: flex; gap: 30px; margin-top: 35px; pointer-events: auto; }
+    .option-btn {
+        background: #f39c12; color: white; border: none; padding: 25px 45px; font-size: 44px; font-weight: bold;
+        border-radius: 20px; cursor: pointer; box-shadow: 0 10px 0 #d35400, 0 10px 25px rgba(0,0,0,0.4); text-shadow: 2px 2px 0 rgba(0,0,0,0.3); min-width: 180px;
+    }
+    .option-btn:active:not(:disabled) { transform: translateY(10px); box-shadow: 0 0 0 #d35400; }
+    .option-btn.solved { background: #27ae60 !important; box-shadow: 0 10px 0 #1e8449 !important; cursor: default; }
+    .option-btn.wrong-anim { background: #c0392b; box-shadow: 0 10px 0 #8e241a; }
+
+    /* АНІМАЦІЯ ВОДИ */
+    .water-stream {
+        position: absolute; background: rgba(52, 152, 219, 0.9); width: 35px; height: 20px;
+        border-radius: 15px; z-index: 18; pointer-events: none; box-shadow: 0 0 15px #87ceeb; opacity: 0; border: 2px solid #fff;
+    }
+    @keyframes shootWater {
+        0% { left: 630px; bottom: 140px; opacity: 1; transform: scale(1) rotate(5deg); }
+        50% { left: 760px; bottom: 170px; transform: scale(1.6) rotate(15deg); }
+        100% { left: 900px; bottom: 90px; opacity: 0; transform: scale(2.2) rotate(45deg); }
+    }
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div class="bg-layer">
+        <div class="stars"></div>
+        <div class="moon"></div>
+        <div class="ground-bg"></div>
+        <div class="firetruck-bg">
+            <div class="wheel-bg w1"></div>
+            <div class="wheel-bg w2"></div>
+        </div>
+    </div>
+
+    <div class="game-layer">
+        <div class="ground-fg"></div>
+        
+        <div class="house-complex">
+            <div class="roof"></div>
+            <div class="house">
+                <div class="window win1"></div>
+                <div class="window win2"></div>
+                <div class="door"><div class="door-knob"></div></div>
+            </div>
+        </div>
+        
+        <div id="fire-container" style="--current-scale: 1;">
+            <div class="flame f1"></div>
+            <div class="flame f2"></div>
+            <div class="flame f3"></div>
+        </div>
+
+        <div class="firefighter-solid">
+            <div class="ff-leg left"><div class="ff-leg-stripe"></div></div>
+            <div class="ff-leg right"><div class="ff-leg-stripe"></div></div>
+            <div class="ff-boot left"></div>
+            <div class="ff-boot right"></div>
+            <div class="ff-torso"><div class="ff-torso-stripe"></div></div>
+            <div class="ff-arm left"><div class="ff-glove"></div></div>
+            <div class="ff-arm right"><div class="ff-glove"></div></div>
+            <div class="ff-head-group">
+                <div class="ff-helmet-top"></div>
+                <div class="ff-helmet-brim"></div>
+                <div class="ff-head">
+                    <div class="ff-eye l"></div>
+                    <div class="ff-eye r"></div>
+                    <div class="ff-nose"></div>
+                    <div class="ff-mouth"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hose-system">
+            <div class="nozzle"></div>
+        </div>
+    </div>
+
+    <div class="ui-layer">
+        <div class="top-panel">
+            <div style="width: 130px;"></div>
+            <div id="task-board">...</div>
+            <button class="nav-btn" id="btn-next" onclick="changeLevel(1)">Далі ▶</button>
+        </div>
+        <div id="options-container"></div>
+    </div>
+</div>
+
+<script>
+    // Масштабування екрану з абсолютним позиціонуванням по центру
+    function resizeGame() {
+        const wrapper = document.getElementById('game-wrapper');
+        const scaleX = window.innerWidth / 1280;
+        const scaleY = window.innerHeight / 720;
+        const scale = Math.min(scaleX, scaleY); // Масштабуємо за найменшою стороною
+        wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    window.addEventListener('resize', resizeGame);
+    window.addEventListener('orientationchange', resizeGame);
+    resizeGame();
+
+    // Генерація звуків (Web Audio API)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new AudioContext();
+        }
+    }
+
+    function playSuccessSound() {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function playErrorSound() {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    const levels = [
+        { eq: "500 мл + ? = 1 л", ans: 500, opts: [300, 500, 600], unit: 'ml' },
+        { eq: "200 мл × ? = 1 л", ans: 5, opts: [4, 5, 10], unit: 'dimensionless' },
+        { eq: "? + 300 мл = 1 л", ans: 700, opts: [700, 800, 600], unit: 'ml' },
+        { eq: "250 мл × ? = 1 л", ans: 4, opts: [2, 4, 5], unit: 'dimensionless' },
+        { eq: "800 мл + ? = 1 л", ans: 200, opts: [100, 200, 300], unit: 'ml' },
+        { eq: "500 мл × ? = 1 л", ans: 2, opts: [2, 5, 10], unit: 'dimensionless' },
+        { eq: "? + 50 мл = 1 л", ans: 950, opts: [900, 850, 950], unit: 'ml' },
+        { eq: "100 мл × ? = 1 л", ans: 10, opts: [10, 100, 5], unit: 'dimensionless' },
+        { eq: "400 мл + ? = 1 л", ans: 600, opts: [400, 500, 600], unit: 'ml' },
+        { eq: "? + 750 мл = 1 л", ans: 250, opts: [250, 350, 150], unit: 'ml' },
+        { eq: "900 мл + ? = 1 л", ans: 100, opts: [10, 100, 200], unit: 'ml' },
+        { eq: "1 л = ? + 600 мл", ans: 400, opts: [300, 400, 500], unit: 'ml' },
+        { eq: "1 л = 200 мл + ?", ans: 800, opts: [800, 700, 900], unit: 'ml' },
+        { eq: "1 л = 100 мл × ?", ans: 10, opts: [10, 5, 2], unit: 'dimensionless' },
+        { eq: "1 л = ? + 150 мл", ans: 850, opts: [750, 850, 950], unit: 'ml' }
+    ];
+
+    let currentLevelIndex = 0;
+    let firePenalty = 0;
+    const solvedLevels = new Set();
+    
+    const taskBoard = document.getElementById('task-board');
+    const optionsContainer = document.getElementById('options-container');
+    const fireContainer = document.getElementById('fire-container');
+    const gameLayer = document.querySelector('.game-layer');
+    const btnNext = document.getElementById('btn-next');
+
+    levels.forEach(lvl => {
+        lvl.shuffledOpts = [...lvl.opts].sort(() => Math.random() - 0.5);
+    });
+
+    function loadLevel() {
+        const levelData = levels[currentLevelIndex];
+        const isSolved = solvedLevels.has(currentLevelIndex);
+        
+        taskBoard.innerHTML = `<span style="color:#e74c3c; font-size: 50px;">${levelData.eq}</span>`;
+        optionsContainer.innerHTML = "";
+
+        levelData.shuffledOpts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            
+            let btnText = opt;
+            if (levelData.unit === 'ml') btnText = opt + " мл";
+
+            if (isSolved && opt === levelData.ans) {
+                btn.classList.add('solved');
+                btn.innerText = btnText + " ✓";
+                btn.disabled = true;
+            } else if (isSolved) {
+                btn.style.display = 'none';
+            } else {
+                btn.innerText = btnText;
+                btn.onclick = () => checkAnswer(opt, levelData.ans, btn);
+            }
+            optionsContainer.appendChild(btn);
+        });
+
+        btnNext.disabled = currentLevelIndex === levels.length - 1;
+
+        updateFireScale(false);
+    }
+
+    function changeLevel(dir) {
+        initAudio(); // Ініціалізація аудіо по кліку користувача
+        currentLevelIndex += dir;
+        if (currentLevelIndex >= levels.length) currentLevelIndex = 0; // Зациклення при натисканні "Далі" в кінці (можна прибрати, якщо треба інакше)
+        loadLevel();
+    }
+
+    function checkAnswer(selected, correct, btnElement) {
+        initAudio();
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => btn.disabled = true);
+        btnNext.disabled = true;
+
+        if (selected === correct) {
+            playSuccessSound();
+            solvedLevels.add(currentLevelIndex);
+            btnElement.classList.add('solved');
+            shootWater();
+        } else {
+            playErrorSound();
+            btnElement.classList.add('wrong-anim');
+            firePenalty += 0.15;
+            updateFireScale(true);
+            showBigError();
+        }
+    }
+
+    function shootWater() {
+        for (let i = 0; i < 18; i++) {
+            setTimeout(() => {
+                const drop = document.createElement('div');
+                drop.className = 'water-stream';
+                drop.style.animation = `shootWater 0.65s linear forwards`;
+                gameLayer.appendChild(drop);
+
+                setTimeout(() => drop.remove(), 650);
+
+                if (i === 17) {
+                    setTimeout(() => {
+                        updateFireScale(true);
+                        setTimeout(() => {
+                            if (currentLevelIndex < levels.length - 1) {
+                                currentLevelIndex++;
+                                loadLevel();
+                            } else if (solvedLevels.size === levels.length) {
+                                winGame();
+                            } else {
+                                loadLevel();
+                            }
+                        }, 800);
+                    }, 500);
+                }
+            }, i * 35);
+        }
+    }
+
+    function updateFireScale(animate = false) {
+        const solvedCount = solvedLevels.size;
+        let scale = 1 - (solvedCount / levels.length) + firePenalty;
+        if (scale < 0.1 && solvedCount < levels.length) scale = 0.1;
+        if (solvedCount === levels.length) scale = 0;
+
+        fireContainer.style.setProperty('--current-scale', scale);
+        
+        if (animate) {
+            fireContainer.style.transform = `scale(${scale})`;
+        } else {
+            fireContainer.style.transition = 'none';
+            fireContainer.style.transform = `scale(${scale})`;
+            void fireContainer.offsetWidth;
+            fireContainer.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        }
+        
+        fireContainer.style.display = (scale <= 0) ? 'none' : 'flex';
+    }
+
+    function showBigError() {
+        fireContainer.style.animation = 'none';
+        void fireContainer.offsetWidth;
+        fireContainer.style.animation = 'bigFireError 1.2s ease-in-out';
+        
+        setTimeout(() => {
+            fireContainer.style.animation = '';
+            loadLevel(); 
+        }, 1200);
+    }
+
+    function winGame() {
+        fireContainer.style.display = 'none';
+        taskBoard.innerHTML = "🎉 ЧУДОВО! 🎉<br><span style='font-size:30px'>Всі 15 літрів зібрано, пожежу загашено!</span>";
+        optionsContainer.innerHTML = "";
+    }
+
+    // Запускаємо гру
+    document.addEventListener('click', initAudio, { once: true }); // Дозволяємо звук після першого дотику до екрану
+    loadLevel();
+</script>
+
+</body>
+</html>
