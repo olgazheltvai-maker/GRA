@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Рожева Мушля 12.0 (Адаптив та Живі Водорості)</title>
+    <style>
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: #010a15; 
+            overflow: hidden; touch-action: none; user-select: none; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        svg { display: block; width: 100vw; height: 100vh; }
+        .interactive { cursor: pointer; }
+        .fish:active { cursor: grabbing; }
+        
+        .btn-ui-scale { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: 0px 0px; }
+        .interactive:hover .btn-ui-scale { transform: scale(1.15); }
+        .interactive:active .btn-ui-scale { transform: scale(0.9); }
+        
+        .light-ray { animation: ray-shift 15s infinite alternate linear; transform-origin: top center; }
+        @keyframes ray-shift { 0% { transform: rotate(-5deg) scaleY(1); opacity: 0.15; } 100% { transform: rotate(5deg) scaleY(1.3); opacity: 0.3; } }
+        .caustic { animation: caustic-shift 12s infinite linear; opacity: 0.35; }
+        @keyframes caustic-shift { 0% { transform: translate(0, 0); } 100% { transform: translate(500px, 500px); } }
+        .bubble { animation: rise linear forwards; }
+        @keyframes rise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-1500px) scale(2); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="game-root"></div>
+
+<script>
+// ==========================================
+// ЯДРО СИСТЕМИ "КОД" - ВЕРСІЯ 12.0
+// ==========================================
+
+const root = document.getElementById('game-root');
+let audioCtx = null;
+let unlocked = false;
+
+let history = [];
+let currentStep = -1;
+let fishes = [];
+let animFrame = null;
+let time = 0;
+let molluskJawAngle = -40; 
+let targetJawAngle = -40;
+
+// Динамічні розміри ігрового світу
+let gameW = 1600;
+let gameH = 900;
+
+// Генератор усіх можливих комбінацій в межах 10
+const mathTasks = [];
+for(let i=1; i<=9; i++) {
+    for(let j=1; j<=(10-i); j++) mathTasks.push({ a: i, b: j, answer: i+j, isSum: true });
+}
+for(let i=2; i<=10; i++) {
+    for(let j=1; j<i; j++) mathTasks.push({ a: i, b: j, answer: i-j, isSum: false });
+}
+
+function initAudio() {
+    if (!unlocked) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
+        unlocked = true;
+    }
+}
+
+function playSound(type) {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    if (type === 'success') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+        osc.start(now); osc.stop(now + 1.2);
+    } else if (type === 'fail') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.start(now); osc.stop(now + 0.5);
+    } else if (type === 'suction') { 
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.linearRampToValueAtTime(500, now + 0.6);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+        osc.start(now); osc.stop(now + 0.6);
+    }
+}
+
+const svgNS = "http://www.w3.org/2000/svg";
+const svg = document.createElementNS(svgNS, "svg");
+root.appendChild(svg);
+
+const defs = `
+    <defs>
+        <radialGradient id="deep-water" cx="50%" cy="0%" r="100%">
+            <stop offset="0%" stop-color="#2a3b4c" />
+            <stop offset="60%" stop-color="#0d2b4a" />
+            <stop offset="100%" stop-color="#020a14" />
+        </radialGradient>
+        <radialGradient id="petal-grad" cx="50%" cy="20%" r="80%">
+            <stop offset="0%" stop-color="#ff99cc" />
+            <stop offset="50%" stop-color="#ff3385" />
+            <stop offset="100%" stop-color="#cc0055" />
+        </radialGradient>
+        <radialGradient id="pearl-grad-idle" cx="40%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="30%" stop-color="#ffb3d9" />
+            <stop offset="80%" stop-color="#ff66b3" />
+            <stop offset="100%" stop-color="#cc0066" />
+        </radialGradient>
+        <radialGradient id="pearl-grad-success" cx="40%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="30%" stop-color="#b3e6ff" />
+            <stop offset="80%" stop-color="#33bbff" />
+            <stop offset="100%" stop-color="#0077cc" />
+        </radialGradient>
+
+        <radialGradient id="fish-grad-0" cx="30%" cy="30%" r="70%"><stop offset="0%" stop-color="#ff77bb" /><stop offset="100%" stop-color="#cc0055" /></radialGradient>
+        <radialGradient id="fish-grad-1" cx="30%" cy="30%" r="70%"><stop offset="0%" stop-color="#ffcc66" /><stop offset="100%" stop-color="#cc6600" /></radialGradient>
+        <radialGradient id="fish-grad-2" cx="30%" cy="30%" r="70%"><stop offset="0%" stop-color="#66ffaa" /><stop offset="100%" stop-color="#00aa55" /></radialGradient>
+        <radialGradient id="fish-grad-3" cx="30%" cy="30%" r="70%"><stop offset="0%" stop-color="#66ccff" /><stop offset="100%" stop-color="#0055cc" /></radialGradient>
+        <radialGradient id="fish-grad-4" cx="30%" cy="30%" r="70%"><stop offset="0%" stop-color="#cc66ff" /><stop offset="100%" stop-color="#6600cc" /></radialGradient>
+        
+        <pattern id="caustic-pattern" patternUnits="userSpaceOnUse" width="1000" height="1000">
+            <path d="M 0 500 Q 250 250 500 500 T 1000 500 M 0 300 Q 250 50 500 300 T 1000 300 M 0 700 Q 250 450 500 700 T 1000 700" stroke="#aaffff" stroke-width="2" opacity="0.4" fill="none" />
+        </pattern>
+
+        <filter id="extreme-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="20" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="drop-shadow">
+            <feDropShadow dx="0" dy="25" stdDeviation="15" flood-color="#000" flood-opacity="0.8"/>
+        </filter>
+    </defs>
+`;
+
+let sceneHTML = defs + `<rect x="-5000" y="-5000" width="10000" height="10000" fill="url(#deep-water)" />`;
+
+sceneHTML += `
+    <rect x="-5000" y="-5000" width="10000" height="10000" fill="url(#caustic-pattern)" class="caustic" style="mix-blend-mode: overlay;" />
+    <polygon points="-2000,-1000 4000,-1000 2000,3000 -1000,3000" fill="#aaffff" class="light-ray" style="mix-blend-mode: overlay;" />
+    <polygon points="0,-1000 5000,-1000 3000,3000 1000,3000" fill="#ffffff" class="light-ray" style="mix-blend-mode: overlay; animation-delay: -7s;" />
+`;
+
+sceneHTML += `<g id="corals-layer"></g>`; 
+
+sceneHTML += `
+    <g id="ambient-bubbles"></g>
+
+    <g id="mollusk-group">
+        <ellipse cx="0" cy="120" rx="350" ry="50" fill="#000" opacity="0.6" filter="blur(20px)" />
+        <g id="top-shell" transform="rotate(-40, 0, 0)" filter="url(#drop-shadow)">
+            <ellipse cx="-180" cy="-100" rx="60" ry="160" transform="rotate(-65 -180 -100)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="180" cy="-100" rx="60" ry="160" transform="rotate(65 180 -100)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="-120" cy="-160" rx="65" ry="200" transform="rotate(-40 -120 -160)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="120" cy="-160" rx="65" ry="200" transform="rotate(40 120 -160)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="-60" cy="-200" rx="70" ry="230" transform="rotate(-20 -60 -200)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="60" cy="-200" rx="70" ry="230" transform="rotate(20 60 -200)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="0" cy="-220" rx="75" ry="250" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+        </g>
+        <ellipse cx="0" cy="-10" rx="200" ry="60" fill="#660022" stroke="#4d001a" stroke-width="10"/>
+        <g id="bottom-shell" filter="url(#drop-shadow)">
+            <ellipse cx="-180" cy="30" rx="120" ry="40" transform="rotate(-25 -180 30)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="180" cy="30" rx="120" ry="40" transform="rotate(25 180 30)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="-100" cy="40" rx="110" ry="50" transform="rotate(-15 -100 40)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="100" cy="40" rx="110" ry="50" transform="rotate(15 100 40)" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+            <ellipse cx="0" cy="50" rx="100" ry="60" fill="url(#petal-grad)" stroke="#c91460" stroke-width="6"/>
+        </g>
+        
+        <g id="pearl-group" transform="translate(0, -30)">
+            <circle id="pearl-glow" cx="0" cy="0" r="115" fill="#33bbff" filter="url(#extreme-glow)" style="opacity: 0; transition: opacity 1.5s ease-in-out;"/>
+            <circle cx="0" cy="0" r="95" fill="url(#pearl-grad-idle)" stroke="#ffb3d9" stroke-width="4" filter="url(#drop-shadow)"/>
+            <circle id="pearl-success" cx="0" cy="0" r="95" fill="url(#pearl-grad-success)" stroke="#aaffff" stroke-width="4" style="opacity: 0; transition: opacity 1.5s ease-in-out;"/>
+            <ellipse cx="-30" cy="-30" rx="20" ry="35" fill="#ffffff" transform="rotate(-30 -30 -30)" opacity="0.95"/>
+            <ellipse cx="30" cy="-15" rx="15" ry="25" fill="#ffffff" transform="rotate(40 30 -15)" opacity="0.95"/>
+            <circle cx="-10" cy="40" r="12" fill="#ffffff" opacity="0.95"/>
+            
+            <text id="task-text" x="0" y="-12" text-anchor="middle" font-size="44" font-weight="900" fill="#001133" pointer-events="none">СУМА</text>
+            <text id="task-numbers" x="0" y="45" text-anchor="middle" font-size="62" font-weight="900" fill="#000000" pointer-events="none">0 і 0</text>
+        </g>
+    </g>
+
+    <g id="fishes-layer"></g>
+
+    <g id="btn-next" class="interactive">
+        <g class="btn-ui-scale">
+            <circle cx="0" cy="0" r="45" fill="#003366" stroke="#00ffff" stroke-width="4" filter="url(#extreme-glow)"/>
+            <path d="M-10,-18 L15,0 L-10,18" fill="none" stroke="#00ffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12,-18 L37,0 L12,18" fill="none" stroke="#00ffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+    </g>
+`;
+
+svg.innerHTML = sceneHTML;
+
+const taskText = document.getElementById('task-text');
+const taskNumbers = document.getElementById('task-numbers');
+const fishesLayer = document.getElementById('fishes-layer');
+const ambientBubbles = document.getElementById('ambient-bubbles');
+const topShell = document.getElementById('top-shell');
+const pearlSuccess = document.getElementById('pearl-success');
+const pearlGlow = document.getElementById('pearl-glow');
+const molluskGroup = document.getElementById('mollusk-group');
+const btnNext = document.getElementById('btn-next');
+const coralsLayer = document.getElementById('corals-layer');
+
+const fishPalettes = [
+    { body: 'url(#fish-grad-0)', fins: '#ff77bb', stroke: '#ff0066' }, 
+    { body: 'url(#fish-grad-1)', fins: '#ffaa33', stroke: '#cc5500' }, 
+    { body: 'url(#fish-grad-2)', fins: '#33ffaa', stroke: '#00cc55' }, 
+    { body: 'url(#fish-grad-3)', fins: '#33ccff', stroke: '#0066cc' }, 
+    { body: 'url(#fish-grad-4)', fins: '#cc33ff', stroke: '#8800cc' }  
+];
+
+// ==========================================
+// АДАПТИВНА ВЕКТОРНА КАМЕРА
+// ==========================================
+function updateCamera() {
+    const aspect = window.innerWidth / window.innerHeight;
+    
+    if (aspect >= 1) { 
+        gameH = 1000;
+        gameW = 1000 * aspect;
+    } else { 
+        gameW = 1000;
+        gameH = 1000 / aspect;
+    }
+    
+    svg.setAttribute("viewBox", `0 0 ${gameW} ${gameH}`);
+    
+    molluskGroup.setAttribute('transform', `translate(${gameW/2}, ${gameH - 120})`);
+    btnNext.setAttribute('transform', `translate(${gameW - 80}, 80)`);
+    
+    // Встановлюємо шар водоростей точно на дно екрану
+    coralsLayer.setAttribute('transform', `translate(0, ${gameH})`);
+
+    if (coralsLayer.children.length === 0) {
+        let coralsHTML = '';
+        // Генеруємо водорості з великим запасом (-1000 до 4000), щоб вони ніколи не зникали
+        for(let i=0; i<60; i++) {
+            const x = -1000 + Math.random() * 5000;
+            const h = 200 + Math.random() * 600;
+            const color = (Math.random() > 0.5 ? "#2a3b4c" : "#1a2b3c"); 
+            const width = 10 + Math.random() * 15;
+            coralsHTML += `<path class="seaweed-anim" data-x="${x}" data-h="${h}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" opacity="0.7"/>`;
+        }
+        coralsLayer.innerHTML = coralsHTML;
+    }
+}
+window.addEventListener('resize', updateCamera);
+window.addEventListener('orientationchange', () => setTimeout(updateCamera, 100));
+
+function generateTaskData() {
+    const task = mathTasks[Math.floor(Math.random() * mathTasks.length)];
+    let options = [task.answer];
+    while(options.length < 4) {
+        let wrong = task.answer + Math.floor(Math.random() * 9) - 4; 
+        if (wrong > 0 && wrong <= 10 && !options.includes(wrong)) {
+            options.push(wrong);
+        }
+    }
+    options.sort(() => Math.random() - 0.5);
+    return { ...task, options };
+}
+
+function createFishSVG(number) {
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'interactive fish');
+    g.dataset.val = number;
+    
+    const palette = fishPalettes[Math.floor(Math.random() * fishPalettes.length)];
+    const tail = `<path d="M -50 0 C -90 -30, -110 -50, -100 0 C -110 50, -90 30, -50 0 Z" fill="${palette.fins}" opacity="0.9" pointer-events="none"/>`;
+    const topFin = `<path d="M -20 -25 C 0 -60, 30 -40, 10 -20 Z" fill="${palette.fins}" opacity="0.8" pointer-events="none"/>`;
+    const botFin = `<path d="M -20 25 C 0 60, 30 40, 10 20 Z" fill="${palette.fins}" opacity="0.8" pointer-events="none"/>`;
+    const body = `<path d="M -60 0 C -30 -40, 50 -40, 70 0 C 50 40, -30 40, -60 0 Z" fill="${palette.body}" pointer-events="visiblePainted" stroke="${palette.stroke}" stroke-width="3"/>`;
+    const stripes = `<path d="M -10 -20 Q 0 0 -10 20 M 10 -25 Q 20 0 10 25 M 30 -22 Q 40 0 30 22" stroke="#ffffff" stroke-width="4" opacity="0.4" fill="none" pointer-events="none"/>`;
+    const eye = `<circle cx="45" cy="-8" r="8" fill="#fff" pointer-events="none"/><circle cx="48" cy="-8" r="4" fill="#000" pointer-events="none"/>`;
+    
+    const innerG = document.createElementNS(svgNS, 'g');
+    innerG.setAttribute('class', 'fish-inner');
+    innerG.innerHTML = `<g transform="scale(1.4)">${tail + topFin + botFin + body + stripes + eye}</g>`;
+    const text = `<text class="fish-text" x="-10" y="15" text-anchor="middle" font-size="55" font-weight="900" fill="#ffffff" pointer-events="none" stroke="#000" stroke-width="2">${number}</text>`;
+    
+    g.appendChild(innerG);
+    g.insertAdjacentHTML('beforeend', text);
+    return g;
+}
+
+function loadLevel(step) {
+    updateCamera(); 
+    if (step >= history.length) history.push(generateTaskData());
+    currentStep = step;
+    const data = history[currentStep];
+
+    taskText.textContent = data.isSum ? 'СУМА' : 'РІЗНИЦЯ';
+    taskNumbers.textContent = `${data.a} і ${data.b}`;
+    
+    pearlSuccess.style.transition = 'none';
+    pearlGlow.style.transition = 'none';
+    pearlSuccess.style.opacity = '0';
+    pearlGlow.style.opacity = '0';
+    
+    setTimeout(() => {
+        pearlSuccess.style.transition = 'opacity 1.5s ease-in-out';
+        pearlGlow.style.transition = 'opacity 1.5s ease-in-out';
+    }, 50);
+
+    targetJawAngle = -40; 
+    fishesLayer.innerHTML = '';
+    fishes = [];
+
+    data.options.forEach((opt) => {
+        const fSVG = createFishSVG(opt);
+        fishesLayer.appendChild(fSVG);
+        fishes.push({
+            el: fSVG,
+            val: opt,
+            x: 150 + Math.random() * (gameW - 300), 
+            y: gameH * 0.15 + Math.random() * (gameH * 0.45), // Риби плавають вище
+            vx: (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 2),
+            vy: 0,
+            baseY: gameH * 0.15 + Math.random() * (gameH * 0.45),
+            state: 'swimming',
+            angle: 0
+        });
+    });
+}
+
+function spawnBubble(x, y) {
+    const b = document.createElementNS(svgNS, 'circle');
+    b.setAttribute('cx', x || Math.random() * gameW);
+    b.setAttribute('cy', y || gameH);
+    b.setAttribute('r', 8 + Math.random() * 15);
+    b.setAttribute('fill', 'rgba(200, 255, 255, 0.5)');
+    b.setAttribute('class', 'bubble');
+    b.style.animationDuration = (3 + Math.random() * 4) + 's';
+    ambientBubbles.appendChild(b);
+    setTimeout(() => { if(b.parentNode) b.parentNode.removeChild(b); }, 7000);
+}
+
+function gameLoop() {
+    time += 0.03;
+
+    molluskJawAngle += (targetJawAngle - molluskJawAngle) * 0.15;
+    topShell.setAttribute('transform', `rotate(${molluskJawAngle}, 0, 0)`);
+
+    // Анімація живих водоростей
+    document.querySelectorAll('.seaweed-anim').forEach(weed => {
+        const startX = parseFloat(weed.dataset.x);
+        const h = parseFloat(weed.dataset.h);
+        const sway = Math.sin(time + startX/200) * 80;
+        // Малюємо від дна (0,0 у локальних координатах шару) вгору (-h)
+        weed.setAttribute('d', `M ${startX} 0 Q ${startX + sway} ${-h/2} ${startX + sway*1.5} ${-h}`);
+    });
+
+    let closestDist = Infinity;
+
+    fishes.forEach(f => {
+        const inner = f.el.querySelector('.fish-inner');
+        const text = f.el.querySelector('.fish-text');
+
+        if (f.state === 'swimming') {
+            f.x += f.vx;
+            f.y = f.baseY + Math.sin(time * 2 + f.x/100) * 40;
+            
+            if (f.x < 150) f.vx += 0.08;
+            if (f.x > gameW - 150) f.vx -= 0.08;
+            
+            f.angle = f.vx > 0 ? 0 : 180;
+            
+            const dist = Math.sqrt((gameW/2 - f.x)**2 + ((gameH - 120) - f.y)**2);
+            if (dist < closestDist) closestDist = dist;
+
+        } else if (f.state === 'sucked') {
+            const targetX = gameW/2;
+            const targetY = gameH - 180; 
+            const dx = targetX - f.x;
+            const dy = targetY - f.y;
+            
+            f.x += dx * 0.08; 
+            f.y += dy * 0.08;
+            f.angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            if (Math.abs(dx) < 20 && Math.abs(dy) < 20) processBite(f);
+
+        } else if (f.state === 'spitting') {
+            f.x += f.vx;
+            f.y += f.vy;
+            f.vy += 0.6; 
+            f.angle = Math.atan2(f.vy, f.vx) * (180 / Math.PI);
+
+            if (f.vy > 5) { 
+                f.state = 'swimming';
+                f.baseY = f.y;
+                f.vx = f.vx > 0 ? 3 : -3;
+            }
+        }
+
+        let scaleY = (f.angle > 90 || f.angle < -90) ? -1 : 1; 
+        inner.setAttribute('transform', `rotate(${f.angle}) scale(1, ${scaleY})`);
+        f.el.setAttribute('transform', `translate(${f.x}, ${f.y})`);
+        text.setAttribute('transform', `translate(${f.vx > 0 ? -10 : 10}, 15)`);
+    });
+
+    if (!fishes.some(f => f.state === 'sucked' || f.state === 'spitting')) {
+        let openAmount = Math.max(-60, -40 - (400 / closestDist) * 15); 
+        targetJawAngle = Math.min(-30, openAmount); 
+    }
+
+    if (Math.random() > 0.85) spawnBubble();
+
+    animFrame = requestAnimationFrame(gameLoop);
+}
+
+btnNext.addEventListener('pointerdown', (e) => {
+    e.stopPropagation(); 
+    playSound('suction'); 
+    loadLevel(currentStep + 1); 
+});
+
+svg.addEventListener('pointerdown', (e) => {
+    initAudio(); 
+    const fishGroup = e.target.closest('.fish');
+    if (fishGroup) {
+        if (fishes.some(f => f.state === 'sucked')) return;
+
+        const clickedFish = fishes.find(f => f.el === fishGroup);
+        if (clickedFish && clickedFish.state === 'swimming') {
+            clickedFish.state = 'sucked';
+            playSound('suction');
+            targetJawAngle = -70; 
+            fishesLayer.appendChild(clickedFish.el); 
+            
+            for(let i=0; i<8; i++) setTimeout(() => spawnBubble(gameW/2 + (Math.random()*200-100), gameH - 180), i*80);
+        }
+    }
+});
+
+function processBite(fishObj) {
+    const data = history[currentStep];
+    const isCorrect = parseInt(fishObj.val) === data.answer;
+
+    if (isCorrect) {
+        playSound('success');
+        fishObj.el.remove(); 
+        fishes = fishes.filter(f => f !== fishObj);
+        
+        pearlSuccess.style.opacity = '1';
+        pearlGlow.style.opacity = '0.8';
+
+        targetJawAngle = 0; 
+        for(let i=0; i<20; i++) spawnBubble(gameW/2, gameH - 150);
+
+        setTimeout(() => loadLevel(currentStep + 1), 2000);
+
+    } else {
+        playSound('fail');
+        targetJawAngle = -80; 
+
+        fishObj.state = 'spitting';
+        const spitDirX = (fishObj.x > gameW/2) ? 18 : -18;
+        fishObj.vx = spitDirX + (Math.random()*10 - 5);
+        fishObj.vy = -25 - Math.random()*10;
+
+        setTimeout(() => { targetJawAngle = -40; }, 900);
+    }
+}
+
+updateCamera();
+loadLevel(0);
+gameLoop();
+
+</script>
+</body>
+</html>
