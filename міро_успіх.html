@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <script src="https://miro.com/app/static/sdk/v2/miro.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 10px; gap: 10px; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        button { 
+            padding: 10px 20px; background: #4262ff; color: white; border: none; 
+            border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;
+        }
+        button:hover { background: #3650d1; }
+    </style>
+</head>
+<body>
+    <input type="text" id="btnText" placeholder="Текст кнопки..." value="Успіх! 🎉">
+    <button id="confettiBtn">Запустити конфеті</button>
+
+    <script>
+        const { board } = miro;
+        const btn = document.getElementById('confettiBtn');
+        const input = document.getElementById('btnText');
+
+        // Оновлюємо текст на кнопці при введенні в інпут
+        input.addEventListener('input', () => {
+            btn.textContent = input.value;
+        });
+
+        // Сама анімація
+        btn.addEventListener('click', () => {
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.8 },
+                zIndex: 9999
+            });
+        });
+    </script>
+</body>
+</html>
