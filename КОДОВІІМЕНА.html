@@ -9,12 +9,11 @@
     <style>
         /* Базові стилі та архітектура */
         body {
-            font-family: 'Propysy Bold', sans-serif;
-            font-weight: bold;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background-color: #f0f2f5; 
+            background-color: #f0f2f5; /* Нейтральний фон */
         }
 
         .game-container {
@@ -77,8 +76,7 @@
             font-size: 16px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-family: 'Propysy Bold', sans-serif;
-            font-weight: bold;
+            font-family: Arial, sans-serif;
         }
 
         .ai-section button {
@@ -190,8 +188,7 @@
         .progress-controls input {
             padding: 10px;
             font-size: 18px;
-            font-family: 'Propysy Bold', sans-serif;
-            font-weight: bold;
+            font-family: Arial, sans-serif;
             border: 2px solid #ccc;
             border-radius: 5px;
             text-transform: uppercase;
@@ -326,7 +323,7 @@
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            font-family: 'Propysy Bold', sans-serif;
+            font-family: Arial, sans-serif;
         }
         .available-word-btn:hover {
             background: #e0e0e0;
@@ -384,10 +381,10 @@
         </div>
 
         <div class="ai-section">
-            <h3 style="font-family: 'Propysy Bold', sans-serif; font-weight: bold;">Запит до ШІ (Введіть тему для слів)</h3>
+            <h3 style="font-family: Arial, sans-serif;">Запит до ШІ (Введіть тему для слів)</h3>
             <input type="text" id="ai-query" placeholder="Наприклад: Всі іменники на літеру П">
             <button onclick="generateGame()">Створити гру</button>
-            <p style="font-size:12px; color:#666; margin-top:5px; font-family: 'Propysy Bold', sans-serif; font-weight: bold;">Використовується відкрита нейромережа для генерації контенту</p>
+            <p style="font-size:12px; color:#666; margin-top:5px; font-family: Arial, sans-serif;">Використовується відкрита нейромережа для генерації контенту</p>
             
             <div class="font-controls" id="font-controls" style="display: none;">
                 <button onclick="changeFontSize(-2)">А- (Зменшити шрифт)</button>
@@ -445,6 +442,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Theme Manager UI -->
@@ -554,44 +552,36 @@
             saveState();
         }
 
-        // Генерація слів через справжній ШІ
+        // ШІ генерація через надійний публічний API OpenAI-сумісний ендпоінт без обмежень CORS
         async function fetchAIWords(query) {
             try {
-                let text = null;
-                const prompt = `Ти генератор слів для гри. Твоє завдання: написати рівно 25 окремих слів (бажано іменників) українською мовою, які повністю відповідають цій темі або умові: "${query}". \nВАЖЛИВО: Пиши ТІЛЬКИ слова, розділені пробілом. Ніяких списків, ніяких цифр, ніяких ком чи крапок, ніякого тексту від себе.`;
-                const encodedPrompt = encodeURIComponent(prompt);
-                const seed = Math.floor(Math.random() * 1000000);
-                const aiUrl = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}&model=openai`;
+                const systemPrompt = "Ти — генератор слів для настільної гри. Твоє завдання: згенерувати рівно 25 унікальних окремих слів (іменників) українською мовою строго на задану користувачем тему чи умову. Повертай ТІЛЬКИ список з 25 слів, розділених пробілом. Жодних нумерацій, жодних пояснень, жодних розділових знаків чи додаткового тексту.";
+                const userPrompt = `Тема або умова: "${query}". Дай рівно 25 слів через пробіл українською мовою.`;
 
-                // Метод 1: Прямий GET-запит до нейромережі
-                try {
-                    const res = await fetch(aiUrl);
-                    if (res.ok) text = await res.text();
-                } catch(e) { console.log("Direct AI fetch failed"); }
+                const res = await fetch("https://text.pollinations.ai/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userPrompt }
+                        ],
+                        seed: Math.floor(Math.random() * 1000000),
+                        model: "openai"
+                    })
+                });
 
-                // Метод 2: Обхід блокування CORS через AllOrigins (повертає JSON)
-                if (!text) {
-                    try {
-                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aiUrl)}`;
-                        const res = await fetch(proxyUrl);
-                        if (res.ok) {
-                            const data = await res.json();
-                            text = data.contents;
-                        }
-                    } catch(e) { console.log("Proxy AI fetch failed"); }
-                }
+                if (!res.ok) throw new Error("Помилка зв'язку з ШІ");
+                let text = await res.text();
 
-                if (!text) throw new Error("Усі методи підключення до ШІ вичерпано.");
-                
-                // Очищення результату: залишаємо тільки кирилицю і апострофи, переводимо у верхній регістр
+                // Очищаємо текст і витягуємо слова
                 let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
                                    .toUpperCase()
                                    .split(/\s+/)
-                                   .filter(w => w.length > 2); 
-                
+                                   .filter(w => w.length > 1); 
+
                 let words = [...new Set(rawWords)];
 
-                // Якщо слів менше 25, доповнюємо резервними, щоб гра не зламалася
                 let fallbackWords = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА", "КОСМОС", "ГАЛАКТИКА", "КОМЕТА", "АСТЕРОЇД"];
                 fallbackWords = fallbackWords.sort(() => Math.random() - 0.5);
                 
@@ -609,16 +599,16 @@
 
                 return words.slice(0, 25);
             } catch (error) {
-                console.error("Помилка генерації слів:", error);
+                console.error("Помилка ШІ API:", error);
                 alert("Не вдалося звернутися до ШІ. Буде використано резервний набір слів.");
                 let fw = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
-                return fw.sort(() => Math.random() - 0.5).slice(0, 25);
+                return fw.sort(() => Math.random() - 0.5);
             }
         }
 
         async function generateGame() {
             const query = document.getElementById('ai-query').value || "Гра";
-            document.getElementById('captain-grid').innerHTML = "<h3 style='grid-column: span 5; text-align:center;'>Мережа підбирає слова (це може зайняти кілька секунд)...</h3>";
+            document.getElementById('captain-grid').innerHTML = "<h3 style='grid-column: span 5; text-align:center;'>ШІ підбирає слова за вашим запитом (це може зайняти кілька секунд)...</h3>";
             document.getElementById('font-controls').style.display = 'none';
             
             let fetchedWords = await fetchAIWords(query);
@@ -664,6 +654,7 @@
             renderProgressPage(); 
         }
 
+        // Керування кольором картки
         function cycleCaptainColor(index, event) {
             event.preventDefault();
 
@@ -673,6 +664,7 @@
             
             gameState.colors[index] = colorOrder[nextIndex];
 
+            // Перерахунок рахунку
             gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, yellow: 0 };
             for(let i = 0; i < 25; i++) {
                 if(!gameState.revealed[i]) {
@@ -752,6 +744,10 @@
             document.getElementById('score-yellow').innerText = gameState.scores.yellow;
         }
 
+        // ==========================================
+        // ХІД ГРИ (Логіка ведення записів та редагування)
+        // ==========================================
+        
         function startNewTurn() {
             let clue = document.getElementById('clue-input').value.trim().toUpperCase();
             let num = document.getElementById('num-input').value.trim();
@@ -761,6 +757,7 @@
                 return;
             }
 
+            // Визначаємо колір: якщо це перший хід, то червоний, інакше чергуємо
             let teamColor = gameState.turns.length % 2 === 0 ? 'red' : 'blue';
 
             gameState.turns.push({ clue: clue, number: num, words: [], team: teamColor });
@@ -776,6 +773,7 @@
         function handleWordReveal(index) {
             if (gameState.revealed[index]) return;
 
+            // Запобіжник: якщо хід ще не створено
             if (gameState.turns.length === 0) {
                 alert("Будь ласка, спершу створіть хід (введіть підказку та натисніть 'Почати хід')!");
                 return;
@@ -784,6 +782,7 @@
             gameState.revealed[index] = true;
             let color = gameState.colors[index];
             
+            // Віднімаємо бал у таблиці
             if (color === 'grey-bg') gameState.scores.grey--;
             else if (color !== 'black') gameState.scores[color]--;
             
@@ -800,11 +799,13 @@
             renderProgressPage();
         }
 
+        // Видалення всього ходу
         function deleteTurn(turnIdx) {
             if(!confirm("Ви впевнені, що хочете видалити цей хід? Всі відкриті в ньому слова будуть закриті, а рахунок відновлено.")) return;
             
             let turn = gameState.turns[turnIdx];
             
+            // Повертаємо всі слова з цього ходу на стіл
             turn.words.forEach(w => {
                 let bIdx = gameState.words.indexOf(w.text);
                 if (bIdx !== -1) {
@@ -815,8 +816,10 @@
                 }
             });
             
+            // Видаляємо хід з масиву
             gameState.turns.splice(turnIdx, 1);
             
+            // Коригуємо активний індекс, якщо потрібно
             if(gameState.activeTurnIndex >= gameState.turns.length) {
                 gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
             }
@@ -827,6 +830,7 @@
             renderProgressPage();
         }
 
+        // Редагування підказки ходу
         function editTurnInfo(turnIdx) {
             let turn = gameState.turns[turnIdx];
             let newClue = prompt("Введіть нову підказку:", turn.clue);
@@ -844,6 +848,7 @@
             renderProgressPage();
         }
 
+        // Керування словами всередині ходу (видалення одного слова)
         function removeWordFromTurn(turnIdx, wordIdx) {
             let wordObj = gameState.turns[turnIdx].words[wordIdx];
             let bIdx = gameState.words.indexOf(wordObj.text);
@@ -863,6 +868,7 @@
             renderProgressPage();
         }
 
+        // Керування словами всередині ходу (переміщення вліво/вправо)
         function moveWordInTurn(turnIdx, wordIdx, dir) {
             let wordsArr = gameState.turns[turnIdx].words;
             if (wordIdx + dir < 0 || wordIdx + dir >= wordsArr.length) return;
@@ -991,7 +997,7 @@
                         thumb.style.justifyContent = 'center';
                         thumb.style.color = 'white';
                         thumb.style.textShadow = '1px 1px 3px black, -1px -1px 3px black';
-                        thumb.style.fontFamily = "'Propysy Bold', sans-serif";
+                        thumb.style.fontFamily = "Arial, sans-serif";
                         thumb.style.fontSize = '14px';
                         thumb.style.paddingBottom = '5px';
                         thumb.innerText = `Фон ${i}`;
