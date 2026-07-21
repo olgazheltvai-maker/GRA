@@ -4,37 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кодові Імена</title>
-    <!-- Підключення html2canvas для створення скріншотів -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+    </script>
     <style>
-        /* Базові стилі та архітектура */
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background-color: #f0f2f5; /* Нейтральний фон */
+            background-color: #f0f2f5;
         }
-
         .game-container {
-            background: rgba(255, 255, 255, 0.9);
-            max-width: 900px;
+            background: rgba(255, 255, 255, 0.92);
+            max-width: 960px;
             margin: 20px auto;
             padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
             position: relative;
         }
-
-        /* Навігація вкладок */
         .tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
             border-bottom: 2px solid #ccc;
             padding-bottom: 10px;
+            flex-wrap: wrap;
         }
-
         .tab {
             padding: 10px 20px;
             cursor: pointer;
@@ -44,23 +43,19 @@
             font-weight: bold;
             transition: 0.2s;
             text-align: center;
+            user-select: none;
         }
-
         .tab.active {
             background: #fff;
             border-color: #aaa;
-            box-shadow: 0 -3px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 -3px 5px rgba(0, 0, 0, 0.08);
         }
-
         .page {
             display: none;
         }
-
         .page.active {
             display: block;
         }
-
-        /* Блок ШІ та контролів */
         .ai-section {
             margin-bottom: 25px;
             padding: 15px;
@@ -69,7 +64,6 @@
             border-radius: 8px;
             text-align: center;
         }
-
         .ai-section input {
             padding: 10px;
             width: 60%;
@@ -78,7 +72,6 @@
             border-radius: 5px;
             font-family: Arial, sans-serif;
         }
-
         .ai-section button {
             padding: 10px 20px;
             font-size: 16px;
@@ -90,7 +83,6 @@
             font-weight: bold;
             margin: 5px;
         }
-
         .font-controls {
             margin-top: 15px;
             display: flex;
@@ -98,45 +90,36 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-
         .font-controls button {
             background: #e0e0e0;
             color: #333;
             border: 1px solid #ccc;
         }
-
         .screenshot-btn {
             background: #008cba !important;
             color: white !important;
         }
-
-        /* Зона для скріншоту таблички */
         #capture-board {
             background: transparent;
             padding: 10px;
             border-radius: 8px;
         }
-
-        /* Табло рахунку */
         .score-board {
             text-align: center;
             font-size: 36px;
             font-weight: bold;
             margin-bottom: 20px;
         }
-
-        /* Таблиця слів */
         .grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
         }
-
         .word-card {
             background: #fff;
             border: 2px solid #ddd;
             border-radius: 6px;
-            height: 45px;
+            height: 48px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -152,11 +135,9 @@
             word-break: break-word;
             line-height: 1.1;
         }
-
         .word-card:active {
             transform: scale(0.95);
         }
-
         .word-card[contenteditable="true"] {
             cursor: text;
             border: 2px dashed #999;
@@ -166,17 +147,28 @@
             background-color: #ffffe0;
             border-color: #333;
         }
-
-        /* Кольори гри */
-        .color-red { color: #ff0000; }
-        .color-blue { color: #00a8ff; }
-        .color-green { color: #00b050; }
-        .color-yellow { color: #ffc000; }
-        .color-black { color: #000000; }
-        .color-grey-bg { background-color: #a6a6a6 !important; color: #000 !important; }
-        .color-grey-text { color: #808080 !important; }
-
-        /* Хід гри */
+        .color-red {
+            color: #ff0000;
+        }
+        .color-blue {
+            color: #00a8ff;
+        }
+        .color-green {
+            color: #00b050;
+        }
+        .color-yellow {
+            color: #ffc000;
+        }
+        .color-black {
+            color: #000000;
+        }
+        .color-grey-bg {
+            background-color: #a6a6a6 !important;
+            color: #000 !important;
+        }
+        .color-grey-text {
+            color: #808080 !important;
+        }
         .progress-controls {
             display: flex;
             justify-content: center;
@@ -184,7 +176,6 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-
         .progress-controls input {
             padding: 10px;
             font-size: 18px;
@@ -193,7 +184,6 @@
             border-radius: 5px;
             text-transform: uppercase;
         }
-
         .progress-controls button {
             padding: 10px 20px;
             font-size: 16px;
@@ -204,14 +194,12 @@
             border-radius: 5px;
             cursor: pointer;
         }
-
         #capture-history {
             background: transparent;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-
         #log-area {
             background: rgba(255, 255, 255, 0.95);
             border: 2px solid #ddd;
@@ -221,7 +209,6 @@
             font-size: 20px;
             line-height: 1.6;
         }
-
         .turn-row {
             margin-bottom: 10px;
             border-bottom: 1px dashed #eee;
@@ -233,27 +220,22 @@
             align-items: center;
             gap: 8px;
         }
-        
         .turn-row:hover {
             background-color: #f9f9f9;
         }
-
         .turn-row.active-turn {
             background-color: #e6f7ff;
             border-left: 5px solid #00a8ff;
         }
-
         .turn-clue-container {
             display: flex;
             align-items: center;
             margin-right: 15px;
         }
-
         .turn-clue {
             font-weight: bold;
             margin-right: 5px;
         }
-
         .turn-action-btn {
             cursor: pointer;
             font-size: 0.8em;
@@ -273,8 +255,6 @@
             color: #ff0000;
             border-color: #ff0000;
         }
-
-        /* Стилі для тегів слів у лозі (для редагування) */
         .turn-word-tag {
             display: inline-flex;
             align-items: center;
@@ -282,9 +262,8 @@
             border: 1px solid #ccc;
             padding: 3px 8px;
             border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
-
         .turn-word-ctrl {
             cursor: pointer;
             font-size: 0.8em;
@@ -299,14 +278,12 @@
         .turn-word-ctrl.del:hover {
             color: #ff0000;
         }
-
         .available-words-section {
             background: rgba(249, 249, 249, 0.9);
             padding: 15px;
             border-radius: 8px;
             border: 1px solid #ddd;
         }
-
         .available-words-grid {
             display: flex;
             flex-wrap: wrap;
@@ -314,7 +291,6 @@
             justify-content: center;
             margin-top: 10px;
         }
-
         .available-word-btn {
             padding: 8px 15px;
             background: #fff;
@@ -328,8 +304,26 @@
         .available-word-btn:hover {
             background: #e0e0e0;
         }
-
-        /* Адаптація для мобільних пристроїв */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-family: Arial, sans-serif;
+        }
+        .toast.show {
+            opacity: 1;
+        }
         @media (max-width: 768px) {
             .game-container {
                 margin: 10px;
@@ -367,13 +361,74 @@
                 width: 100%;
             }
         }
+
+        #theme-settings-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: 2px solid #ccc;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        #theme-settings-btn:hover {
+            transform: scale(1.05);
+        }
+        #theme-modal {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9998;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            max-height: 60vh;
+            overflow-y: auto;
+            width: 300px;
+        }
+        #theme-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .theme-thumb {
+            height: 80px;
+            border-radius: 5px;
+            cursor: pointer;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: #fff;
+            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000;
+            font-size: 13px;
+            padding-bottom: 5px;
+            font-family: Arial, sans-serif;
+            transition: 0.15s;
+            border: 2px solid transparent;
+        }
+        .theme-thumb:hover {
+            border-color: #008cba;
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body>
 
-    <!-- Основний контейнер гри -->
     <div class="game-container">
-        
+
         <div class="tabs">
             <div class="tab active" onclick="switchTab('captain-page', this)">Капітанська табличка</div>
             <div class="tab" onclick="switchTab('player-page', this)">Табличка гравців</div>
@@ -385,7 +440,7 @@
             <input type="text" id="ai-query" placeholder="Наприклад: Всі іменники на літеру П">
             <button onclick="generateGame()">Створити гру</button>
             <p style="font-size:12px; color:#666; margin-top:5px; font-family: Arial, sans-serif;">Використовується відкрита нейромережа для генерації контенту</p>
-            
+
             <div class="font-controls" id="font-controls" style="display: none;">
                 <button onclick="changeFontSize(-2)">А- (Зменшити шрифт)</button>
                 <button onclick="changeFontSize(2)">А+ (Збільшити шрифт)</button>
@@ -393,29 +448,24 @@
             </div>
         </div>
 
-        <!-- Зона захоплення для скріншоту таблички (рахунок + сітка) -->
         <div id="capture-board">
-            <!-- Табло -->
             <div class="score-board" id="score-board" style="display:none;">
-                <span id="score-red" class="color-red">9</span>:<span id="score-blue" class="color-blue">9</span> 
+                <span id="score-red" class="color-red">9</span>:<span id="score-blue" class="color-blue">9</span>
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                 <span id="score-grey" class="color-grey-bg" style="padding:0 10px; border-radius:5px;">1</span>:<span id="score-green" class="color-green">1</span>:<span id="score-yellow" class="color-yellow">1</span>
             </div>
 
-            <!-- Сторінка 1: Капітан -->
             <div id="captain-page" class="page active">
                 <div class="grid" id="captain-grid">
                     <div style="grid-column: span 5; text-align:center; padding: 20px; color:#777;">Введіть тему та натисніть "Створити гру" або продовжіть попередню партію. <br><small>(Щоб змінити колір картки, клікніть по ній правою кнопкою миші)</small></div>
                 </div>
             </div>
 
-            <!-- Сторінка 2: Гравці -->
             <div id="player-page" class="page">
                 <div class="grid" id="player-grid"></div>
             </div>
         </div>
 
-        <!-- Сторінка 3: Хід гри -->
         <div id="progress-page" class="page">
             <div class="progress-controls">
                 <input type="text" id="clue-input" placeholder="Підказка (напр. ПТАХ)" style="width: 45%;">
@@ -423,12 +473,11 @@
                 <button onclick="startNewTurn()">Почати хід</button>
                 <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-history')">📷 Скріншот ходів</button>
             </div>
-            
+
             <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 5px;">
                 Спочатку введіть підказку та натисніть "Почати хід", а потім обирайте слова.
             </p>
-            
-            <!-- Зона захоплення для історії ходів -->
+
             <div id="capture-history">
                 <div id="log-area">
                     <div style="color: #999; text-align: center; font-style: italic;">Тут відображатиметься історія ходів...</div>
@@ -437,32 +486,30 @@
 
             <div class="available-words-section">
                 <h4 style="margin-top: 0; text-align: center;">Слова на столі (натисніть, щоб відкрити):</h4>
-                <div class="available-words-grid" id="available-words-grid">
-                    <!-- Заповнюється JS -->
-                </div>
+                <div class="available-words-grid" id="available-words-grid"></div>
             </div>
         </div>
 
     </div>
 
-    <!-- Theme Manager UI -->
-    <button id="theme-settings-btn" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; border-radius: 50%; width: 50px; height: 50px; background: white; border: 2px solid #ccc; cursor: pointer; font-size: 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">⚙️</button>
-    
-    <div id="theme-modal" style="display: none; position: fixed; bottom: 80px; right: 20px; z-index: 9998; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); max-height: 60vh; overflow-y: auto; width: 300px;">
+    <button id="theme-settings-btn">⚙️</button>
+    <div id="theme-modal">
         <h4 style="margin-top:0; text-align:center;">Виберіть фон</h4>
-        <div id="theme-gallery" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+        <div id="theme-gallery"></div>
     </div>
+
+    <div id="toast" class="toast"></div>
 
     <script>
         // ==========================================
-        // СТАН ГРИ (Локальне збереження)
+        // СТАН ГРИ
         // ==========================================
         let gameState = {
             words: [],
             colors: [],
-            revealed: [], 
+            revealed: [],
             scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
-            turns: [], 
+            turns: [],
             activeTurnIndex: 0,
             currentFontSize: 16
         };
@@ -478,8 +525,7 @@
                     const parsed = JSON.parse(saved);
                     if (parsed && parsed.words && parsed.words.length === 25) {
                         gameState = parsed;
-                        if(typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
-                        
+                        if (typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
                         document.getElementById('score-board').style.display = 'block';
                         document.getElementById('font-controls').style.display = 'flex';
                         updateScoreBoard();
@@ -487,132 +533,136 @@
                         renderPlayerBoard();
                         renderProgressPage();
                     }
-                } catch(e) { console.error("Помилка завантаження стану гри"); }
+                } catch (e) { console.error('Помилка завантаження стану'); }
             }
         }
 
         // ==========================================
-        // ФУНКЦІЯ СКРІНШОТУ У БУФЕР ОБМІНУ
+        // ТОАСТ-ПОВІДОМЛЕННЯ
+        // ==========================================
+        let toastTimer = null;
+
+        function showToast(msg, duration = 2500) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+        }
+
+        // ==========================================
+        // СКРІНШОТ
         // ==========================================
         async function copyScreenshotToClipboard(elementId) {
             const element = document.getElementById(elementId);
-            
-            // Задаємо білий фон для зони скріншоту перед рендером, щоб не було прозоростей
             const originalBg = element.style.background;
             element.style.background = '#ffffff';
-
             try {
-                const canvas = await html2canvas(element, { 
-                    backgroundColor: '#ffffff',
-                    scale: 2
-                });
-                
+                const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2 });
                 canvas.toBlob(async function(blob) {
                     try {
                         const item = new ClipboardItem({ 'image/png': blob });
                         await navigator.clipboard.write([item]);
-                        alert("Скріншот успішно скопійовано в буфер обміну!");
+                        showToast('✅ Скріншот скопійовано в буфер обміну!');
                     } catch (err) {
-                        alert("Не вдалося скопіювати в буфер. Переконайтеся, що ви використовуєте захищене з'єднання (HTTPS). Деталі: " + err);
+                        showToast('❌ Не вдалося скопіювати: ' + err.message, 4000);
                     }
                 });
             } catch (err) {
-                console.error("Помилка створення скріншоту", err);
-                alert("Виникла помилка при створенні скріншоту.");
+                showToast('❌ Помилка скріншоту: ' + err.message, 4000);
             } finally {
-                // Повертаємо оригінальний фон
                 element.style.background = originalBg;
             }
         }
 
         // ==========================================
-        // ЛОГІКА ГРИ "КОДОВІ ІМЕНА"
+        // ВКЛАДКИ
         // ==========================================
-
         function switchTab(pageId, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
             document.getElementById(pageId).classList.add('active');
             element.classList.add('active');
         }
 
+        // ==========================================
+        // РОЗМІР ШРИФТУ
+        // ==========================================
         function changeFontSize(step) {
-            gameState.currentFontSize += step;
-            if(gameState.currentFontSize < 10) gameState.currentFontSize = 10;
-            if(gameState.currentFontSize > 36) gameState.currentFontSize = 36;
-            
-            // Оновлення шрифту в табличках
-            document.querySelectorAll('.word-card').forEach(card => {
-                card.style.fontSize = gameState.currentFontSize + 'px';
+            gameState.currentFontSize = Math.min(36, Math.max(10, gameState.currentFontSize + step));
+            document.querySelectorAll('.word-card, .turn-word-tag, .available-word-btn, .turn-clue').forEach(el => {
+                el.style.fontSize = gameState.currentFontSize + 'px';
             });
-            // Оновлення шрифту в ході гри (викликає перерендер)
             renderProgressPage();
-            
             saveState();
         }
 
-        // ШІ генерація через надійний публічний API OpenAI-сумісний ендпоінт без обмежень CORS
+        // ==========================================
+        // ШІ ГЕНЕРАЦІЯ (виправлено)
+        // ==========================================
         async function fetchAIWords(query) {
+            const fallbackWords = [
+                "ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА",
+                "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ",
+                "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ",
+                "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ",
+                "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"
+            ];
+
             try {
-                const systemPrompt = "Ти — генератор слів для настільної гри. Твоє завдання: згенерувати рівно 25 унікальних окремих слів (іменників) українською мовою строго на задану користувачем тему чи умову. Повертай ТІЛЬКИ список з 25 слів, розділених пробілом. Жодних нумерацій, жодних пояснень, жодних розділових знаків чи додаткового тексту.";
-                const userPrompt = `Тема або умова: "${query}". Дай рівно 25 слів через пробіл українською мовою.`;
+                // Використовуємо правильний ендпоінт Pollinations з GET-запитом (підтримує CORS)
+                const prompt =
+                    `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
+                const url =
+                    `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
 
-                const res = await fetch("https://text.pollinations.ai/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            { role: "user", content: userPrompt }
-                        ],
-                        seed: Math.floor(Math.random() * 1000000),
-                        model: "openai"
-                    })
-                });
+                const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                if (!res.ok) throw new Error("Помилка зв'язку з ШІ");
                 let text = await res.text();
 
-                // Очищаємо текст і витягуємо слова
-                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
-                                   .toUpperCase()
-                                   .split(/\s+/)
-                                   .filter(w => w.length > 1); 
+                // Очищаємо та витягуємо слова
+                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
+                    .toUpperCase()
+                    .split(/\s+/)
+                    .filter(w => w.length > 1);
 
                 let words = [...new Set(rawWords)];
 
-                let fallbackWords = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА", "КОСМОС", "ГАЛАКТИКА", "КОМЕТА", "АСТЕРОЇД"];
-                fallbackWords = fallbackWords.sort(() => Math.random() - 0.5);
-                
-                let i = 0;
-                while(words.length < 25 && i < fallbackWords.length) {
-                    if (!words.includes(fallbackWords[i])) {
-                        words.push(fallbackWords[i]);
+                // Добираємо до 25 з резерву
+                let shuffledFallback = [...fallbackWords].sort(() => Math.random() - 0.5);
+                let idx = 0;
+                while (words.length < 25 && idx < shuffledFallback.length) {
+                    if (!words.includes(shuffledFallback[idx])) {
+                        words.push(shuffledFallback[idx]);
                     }
-                    i++;
+                    idx++;
                 }
-
-                while(words.length < 25) {
+                while (words.length < 25) {
                     words.push(fallbackWords[Math.floor(Math.random() * fallbackWords.length)]);
                 }
 
                 return words.slice(0, 25);
             } catch (error) {
-                console.error("Помилка ШІ API:", error);
-                alert("Не вдалося звернутися до ШІ. Буде використано резервний набір слів.");
-                let fw = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
-                return fw.sort(() => Math.random() - 0.5);
+                console.warn('ШІ не відповів, використовуємо резерв:', error.message);
+                // Без алерту — тихо використовуємо резерв
+                let shuffled = [...fallbackWords].sort(() => Math.random() - 0.5);
+                return shuffled.slice(0, 25);
             }
         }
 
+        // ==========================================
+        // СТВОРЕННЯ ГРИ
+        // ==========================================
         async function generateGame() {
-            const query = document.getElementById('ai-query').value || "Гра";
-            document.getElementById('captain-grid').innerHTML = "<h3 style='grid-column: span 5; text-align:center;'>ШІ підбирає слова за вашим запитом (це може зайняти кілька секунд)...</h3>";
+            const query = document.getElementById('ai-query').value || 'Гра';
+            const grid = document.getElementById('captain-grid');
+            grid.innerHTML =
+                `<h3 style="grid-column: span 5; text-align:center;">⏳ ШІ підбирає слова за запитом «${query}»...</h3>`;
             document.getElementById('font-controls').style.display = 'none';
-            
+
             let fetchedWords = await fetchAIWords(query);
-            
+
             let colors = [
                 ...Array(9).fill('red'),
                 ...Array(9).fill('blue'),
@@ -632,42 +682,38 @@
                 activeTurnIndex: 0,
                 currentFontSize: gameState.currentFontSize || 16
             };
-            
-            saveState();
 
+            saveState();
             document.getElementById('score-board').style.display = 'block';
             document.getElementById('font-controls').style.display = 'flex';
-            
             updateScoreBoard();
             renderCaptainBoard();
             renderPlayerBoard();
             renderProgressPage();
+            showToast('✅ Гра створена!');
         }
 
+        // ==========================================
+        // РЕНДЕРИНГ ДОШОК
+        // ==========================================
         function updateWordText(index, newText) {
-            let cleanText = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
-            if (cleanText.length > 0) {
-                gameState.words[index] = cleanText;
-            }
+            let clean = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
+            if (clean.length > 0) gameState.words[index] = clean;
             saveState();
-            renderPlayerBoard(); 
-            renderProgressPage(); 
+            renderPlayerBoard();
+            renderProgressPage();
         }
 
-        // Керування кольором картки
         function cycleCaptainColor(index, event) {
             event.preventDefault();
+            const order = ['red', 'blue', 'green', 'yellow', 'grey-bg', 'black'];
+            let cur = gameState.colors[index];
+            let next = order[(order.indexOf(cur) + 1) % order.length];
+            gameState.colors[index] = next;
 
-            const colorOrder = ['red', 'blue', 'green', 'yellow', 'grey-bg', 'black'];
-            let currentColor = gameState.colors[index];
-            let nextIndex = (colorOrder.indexOf(currentColor) + 1) % colorOrder.length;
-            
-            gameState.colors[index] = colorOrder[nextIndex];
-
-            // Перерахунок рахунку
             gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, yellow: 0 };
-            for(let i = 0; i < 25; i++) {
-                if(!gameState.revealed[i]) {
+            for (let i = 0; i < 25; i++) {
+                if (!gameState.revealed[i]) {
                     let c = gameState.colors[i];
                     if (c === 'red') gameState.scores.red++;
                     else if (c === 'blue') gameState.scores.blue++;
@@ -676,7 +722,6 @@
                     else if (c === 'grey-bg') gameState.scores.grey++;
                 }
             }
-
             saveState();
             renderCaptainBoard();
             renderPlayerBoard();
@@ -686,28 +731,19 @@
         function renderCaptainBoard() {
             const grid = document.getElementById('captain-grid');
             grid.innerHTML = '';
-            
             gameState.words.forEach((word, index) => {
                 let card = document.createElement('div');
                 let colorClass = gameState.colors[index] === 'grey-bg' ? 'color-grey-bg' : `color-${gameState.colors[index]}`;
                 card.className = `word-card ${colorClass}`;
                 card.style.fontSize = gameState.currentFontSize + 'px';
                 card.innerText = word;
-                card.contentEditable = "true"; 
-                card.title = "Клікніть правою кнопкою миші, щоб змінити колір"; 
-                
-                card.oncontextmenu = function(e) {
-                    cycleCaptainColor(index, e);
-                };
-
-                card.onblur = function() {
-                    updateWordText(index, this.innerText);
-                    this.innerText = gameState.words[index]; 
-                };
-                card.onkeydown = function(e) {
-                    if(e.key === 'Enter') { e.preventDefault(); this.blur(); }
-                };
-
+                card.contentEditable = 'true';
+                card.title = 'Клікніть правою кнопкою миші, щоб змінити колір';
+                card.oncontextmenu = (e) => cycleCaptainColor(index, e);
+                card.onblur = () => { updateWordText(index, card.innerText);
+                    card.innerText = gameState.words[index]; };
+                card.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault();
+                        card.blur(); } };
                 grid.appendChild(card);
             });
         }
@@ -715,23 +751,20 @@
         function renderPlayerBoard() {
             const grid = document.getElementById('player-grid');
             grid.innerHTML = '';
-            
             gameState.words.forEach((word, index) => {
                 let card = document.createElement('div');
                 card.style.fontSize = gameState.currentFontSize + 'px';
                 card.innerText = word;
-                
                 if (gameState.revealed[index]) {
-                    let color = gameState.colors[index];
+                    let c = gameState.colors[index];
                     card.className = 'word-card';
-                    if (color === 'black') card.classList.add('color-grey-text');
-                    else if (color === 'grey-bg') card.classList.add('color-grey-bg');
-                    else card.classList.add(`color-${color}`);
+                    if (c === 'black') card.classList.add('color-grey-text');
+                    else if (c === 'grey-bg') card.classList.add('color-grey-bg');
+                    else card.classList.add(`color-${c}`);
                 } else {
                     card.className = 'word-card color-black';
                     card.onclick = () => handleWordReveal(index);
                 }
-                
                 grid.appendChild(card);
             });
         }
@@ -745,138 +778,97 @@
         }
 
         // ==========================================
-        // ХІД ГРИ (Логіка ведення записів та редагування)
+        // ХІД ГРИ
         // ==========================================
-        
         function startNewTurn() {
             let clue = document.getElementById('clue-input').value.trim().toUpperCase();
             let num = document.getElementById('num-input').value.trim();
-            
-            if (!clue) {
-                alert("Введіть підказку!");
-                return;
-            }
-
-            // Визначаємо колір: якщо це перший хід, то червоний, інакше чергуємо
+            if (!clue) { showToast('⚠️ Введіть підказку!', 2000); return; }
             let teamColor = gameState.turns.length % 2 === 0 ? 'red' : 'blue';
-
-            gameState.turns.push({ clue: clue, number: num, words: [], team: teamColor });
+            gameState.turns.push({ clue, number: num, words: [], team: teamColor });
             gameState.activeTurnIndex = gameState.turns.length - 1;
-            
             document.getElementById('clue-input').value = '';
             document.getElementById('num-input').value = '';
-            
             saveState();
             renderProgressPage();
+            showToast(`🎯 Хід ${gameState.turns.length} — ${teamColor === 'red' ? 'Червоні' : 'Сині'}`);
         }
 
         function handleWordReveal(index) {
             if (gameState.revealed[index]) return;
-
-            // Запобіжник: якщо хід ще не створено
             if (gameState.turns.length === 0) {
-                alert("Будь ласка, спершу створіть хід (введіть підказку та натисніть 'Почати хід')!");
+                showToast('⚠️ Спочатку почніть хід!', 2500);
                 return;
             }
-
             gameState.revealed[index] = true;
             let color = gameState.colors[index];
-            
-            // Віднімаємо бал у таблиці
             if (color === 'grey-bg') gameState.scores.grey--;
             else if (color !== 'black') gameState.scores[color]--;
-            
-            if (gameState.activeTurnIndex >= 0 && gameState.activeTurnIndex < gameState.turns.length) {
-                gameState.turns[gameState.activeTurnIndex].words.push({
-                    text: gameState.words[index],
-                    color: color
-                });
-            }
 
+            let turn = gameState.turns[gameState.activeTurnIndex];
+            if (turn) {
+                turn.words.push({ text: gameState.words[index], color });
+            }
             saveState();
             updateScoreBoard();
             renderPlayerBoard();
             renderProgressPage();
         }
 
-        // Видалення всього ходу
         function deleteTurn(turnIdx) {
-            if(!confirm("Ви впевнені, що хочете видалити цей хід? Всі відкриті в ньому слова будуть закриті, а рахунок відновлено.")) return;
-            
+            if (!confirm('Ви впевнені, що хочете видалити цей хід?')) return;
             let turn = gameState.turns[turnIdx];
-            
-            // Повертаємо всі слова з цього ходу на стіл
             turn.words.forEach(w => {
-                let bIdx = gameState.words.indexOf(w.text);
-                if (bIdx !== -1) {
-                    gameState.revealed[bIdx] = false;
-                    let color = gameState.colors[bIdx];
-                    if (color === 'grey-bg') gameState.scores.grey++;
-                    else if (color !== 'black') gameState.scores[color]++;
+                let idx = gameState.words.indexOf(w.text);
+                if (idx !== -1) {
+                    gameState.revealed[idx] = false;
+                    let c = gameState.colors[idx];
+                    if (c === 'grey-bg') gameState.scores.grey++;
+                    else if (c !== 'black') gameState.scores[c]++;
                 }
             });
-            
-            // Видаляємо хід з масиву
             gameState.turns.splice(turnIdx, 1);
-            
-            // Коригуємо активний індекс, якщо потрібно
-            if(gameState.activeTurnIndex >= gameState.turns.length) {
+            if (gameState.activeTurnIndex >= gameState.turns.length) {
                 gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
             }
-            
             saveState();
             updateScoreBoard();
             renderPlayerBoard();
             renderProgressPage();
+            showToast('🗑️ Хід видалено');
         }
 
-        // Редагування підказки ходу
         function editTurnInfo(turnIdx) {
             let turn = gameState.turns[turnIdx];
-            let newClue = prompt("Введіть нову підказку:", turn.clue);
-            
-            if (newClue !== null && newClue.trim() !== "") {
-                turn.clue = newClue.trim().toUpperCase();
-            }
-            
-            let newNum = prompt("Введіть нове число (або залиште порожнім):", turn.number);
-            if (newNum !== null) {
-                turn.number = newNum.trim();
-            }
-            
+            let newClue = prompt('Введіть нову підказку:', turn.clue);
+            if (newClue !== null && newClue.trim() !== '') turn.clue = newClue.trim().toUpperCase();
+            let newNum = prompt('Введіть нове число (або порожнє):', turn.number);
+            if (newNum !== null) turn.number = newNum.trim();
             saveState();
             renderProgressPage();
         }
 
-        // Керування словами всередині ходу (видалення одного слова)
         function removeWordFromTurn(turnIdx, wordIdx) {
             let wordObj = gameState.turns[turnIdx].words[wordIdx];
-            let bIdx = gameState.words.indexOf(wordObj.text);
-            
-            if (bIdx !== -1) {
-                gameState.revealed[bIdx] = false;
-                let color = gameState.colors[bIdx];
-                if (color === 'grey-bg') gameState.scores.grey++;
-                else if (color !== 'black') gameState.scores[color]++;
+            let idx = gameState.words.indexOf(wordObj.text);
+            if (idx !== -1) {
+                gameState.revealed[idx] = false;
+                let c = gameState.colors[idx];
+                if (c === 'grey-bg') gameState.scores.grey++;
+                else if (c !== 'black') gameState.scores[c]++;
             }
-            
             gameState.turns[turnIdx].words.splice(wordIdx, 1);
-            
             saveState();
             updateScoreBoard();
             renderPlayerBoard();
             renderProgressPage();
         }
 
-        // Керування словами всередині ходу (переміщення вліво/вправо)
         function moveWordInTurn(turnIdx, wordIdx, dir) {
-            let wordsArr = gameState.turns[turnIdx].words;
-            if (wordIdx + dir < 0 || wordIdx + dir >= wordsArr.length) return;
-            
-            let temp = wordsArr[wordIdx];
-            wordsArr[wordIdx] = wordsArr[wordIdx + dir];
-            wordsArr[wordIdx + dir] = temp;
-            
+            let arr = gameState.turns[turnIdx].words;
+            let newIdx = wordIdx + dir;
+            if (newIdx < 0 || newIdx >= arr.length) return;
+            [arr[wordIdx], arr[newIdx]] = [arr[newIdx], arr[wordIdx]];
             saveState();
             renderProgressPage();
         }
@@ -884,63 +876,61 @@
         function renderProgressPage() {
             const logArea = document.getElementById('log-area');
             const wordsGrid = document.getElementById('available-words-grid');
-            
+
             logArea.innerHTML = '';
             if (gameState.turns.length === 0) {
-                logArea.innerHTML = `<div style="color: #999; text-align: center; font-style: italic; font-size: ${gameState.currentFontSize}px;">Тут відображатиметься історія ходів...</div>`;
+                logArea.innerHTML =
+                    `<div style="color:#999;text-align:center;font-style:italic;font-size:${gameState.currentFontSize}px;">Тут відображатиметься історія ходів...</div>`;
             } else {
                 gameState.turns.forEach((turn, turnIdx) => {
                     let row = document.createElement('div');
                     row.className = 'turn-row';
-                    
-                    if (gameState.activeTurnIndex === turnIdx) {
-                        row.classList.add('active-turn');
-                    }
-                    
-                    row.onclick = function() {
-                        gameState.activeTurnIndex = turnIdx;
+                    if (gameState.activeTurnIndex === turnIdx) row.classList.add('active-turn');
+                    row.onclick = () => { gameState.activeTurnIndex = turnIdx;
                         saveState();
-                        renderProgressPage();
-                    };
+                        renderProgressPage(); };
                     row.style.cursor = 'pointer';
-                    
-                    let teamColorStyle = turn.team === 'red' ? 'color: #ff0000;' : 'color: #00a8ff;';
-                    let numText = turn.number ? ` ${turn.number}` : "";
-                    
+
+                    let teamColorStyle = turn.team === 'red' ? 'color:#ff0000;' : 'color:#00a8ff;';
+                    let numText = turn.number ? ` ${turn.number}` : '';
+
                     let wordsHtml = turn.words.map((w, wIdx) => {
-                        let style = "";
-                        if(w.color === 'red') style = "color: #ff0000;";
-                        else if(w.color === 'blue') style = "color: #00a8ff;";
-                        else if(w.color === 'green') style = "color: #00b050;";
-                        else if(w.color === 'yellow') style = "color: #ffc000; text-shadow: 1px 1px 0 #ccc;";
-                        else if(w.color === 'grey-bg') style = "background: #a6a6a6; color: #000;";
-                        else if(w.color === 'black') style = "color: #808080;"; 
+                        let style = '';
+                        if (w.color === 'red') style = 'color:#ff0000;';
+                        else if (w.color === 'blue') style = 'color:#00a8ff;';
+                        else if (w.color === 'green') style = 'color:#00b050;';
+                        else if (w.color === 'yellow') style = 'color:#ffc000;text-shadow:1px 1px 0 #ccc;';
+                        else if (w.color === 'grey-bg') style = 'background:#a6a6a6;color:#000;';
+                        else if (w.color === 'black') style = 'color:#808080;';
 
-                        let leftBtn = wIdx > 0 ? `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx}, ${wIdx}, -1)">◀</span>` : '';
-                        let rightBtn = wIdx < turn.words.length - 1 ? `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx}, ${wIdx}, 1)">▶</span>` : '';
-                        
-                        return `<div class="turn-word-tag" style="font-size: ${gameState.currentFontSize}px;">
-                            <span style="font-weight:bold; ${style}">${w.text}</span>
-                            ${leftBtn}
-                            ${rightBtn}
-                            <span class="turn-word-ctrl del" onclick="event.stopPropagation(); removeWordFromTurn(${turnIdx}, ${wIdx})">✖</span>
-                        </div>`;
-                    }).join("");
+                        let leftBtn = wIdx > 0 ?
+                            `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},-1)">◀</span>` :
+                            '';
+                        let rightBtn = wIdx < turn.words.length - 1 ?
+                            `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},1)">▶</span>` :
+                            '';
 
-                    let activeLabel = (gameState.activeTurnIndex === turnIdx) ? '<span style="font-size: 12px; color: #666; margin-left: auto;">(Активно)</span>' : '';
+                        return `<div class="turn-word-tag" style="font-size:${gameState.currentFontSize}px;">
+                                    <span style="font-weight:bold;${style}">${w.text}</span>
+                                    ${leftBtn}${rightBtn}
+                                    <span class="turn-word-ctrl del" onclick="event.stopPropagation(); removeWordFromTurn(${turnIdx},${wIdx})">✖</span>
+                                </div>`;
+                    }).join('');
+
+                    let activeLabel = (gameState.activeTurnIndex === turnIdx) ?
+                        '<span style="font-size:12px;color:#666;margin-left:auto;">(Активно)</span>' : '';
 
                     row.innerHTML = `
-                        <div class="turn-clue-container">
-                            <span class="turn-clue" style="${teamColorStyle} font-size: ${gameState.currentFontSize}px;">${turn.clue}${numText}:</span> 
-                            <button class="turn-action-btn" title="Редагувати підказку" onclick="event.stopPropagation(); editTurnInfo(${turnIdx})">✎</button>
-                            <button class="turn-action-btn del" title="Видалити весь хід" onclick="event.stopPropagation(); deleteTurn(${turnIdx})">✖</button>
-                        </div>
-                        <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;">${wordsHtml}</div>
-                        ${activeLabel}
-                    `;
+                            <div class="turn-clue-container">
+                                <span class="turn-clue" style="${teamColorStyle} font-size:${gameState.currentFontSize}px;">${turn.clue}${numText}:</span>
+                                <button class="turn-action-btn" title="Редагувати підказку" onclick="event.stopPropagation(); editTurnInfo(${turnIdx})">✎</button>
+                                <button class="turn-action-btn del" title="Видалити весь хід" onclick="event.stopPropagation(); deleteTurn(${turnIdx})">✖</button>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">${wordsHtml}</div>
+                            ${activeLabel}
+                        `;
                     logArea.appendChild(row);
                 });
-                
                 logArea.scrollTop = logArea.scrollHeight;
             }
 
@@ -958,87 +948,74 @@
         }
 
         // ==========================================
-        // СИСТЕМА ДИНАМІЧНИХ ФОНІВ (THEME MANAGER)
+        // ТЕМИ (ФОНИ)
         // ==========================================
         const bgBaseUrl = 'https://olgazheltvai2.github.io/images/backgrounds/';
-        const themeGallery = document.getElementById('theme-gallery');
-        const themeModal = document.getElementById('theme-modal');
-        const defaultBgUrl = `${bgBaseUrl}background_1.webp`;
+        const defaultBgUrl = bgBaseUrl + 'background_1.webp';
 
         document.getElementById('theme-settings-btn').addEventListener('click', () => {
-            themeModal.style.display = themeModal.style.display === 'none' ? 'block' : 'none';
+            const modal = document.getElementById('theme-modal');
+            modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
         });
 
         async function checkAndLoadBackgrounds() {
-            let i = 1;
-            let consecutiveFails = 0;
-            
-            while (consecutiveFails < 3 && i <= 1000) {
-                let imgUrl = `${bgBaseUrl}background_${i}.webp`;
+            const gallery = document.getElementById('theme-gallery');
+            let i = 1,
+                fails = 0;
+            while (fails < 3 && i <= 1000) {
+                let url = bgBaseUrl + `background_${i}.webp`;
                 try {
                     let exists = await new Promise((resolve) => {
                         let img = new Image();
                         img.onload = () => resolve(true);
                         img.onerror = () => resolve(false);
-                        img.src = imgUrl;
+                        img.src = url;
                     });
-
                     if (exists) {
-                        consecutiveFails = 0;
+                        fails = 0;
                         let thumb = document.createElement('div');
-                        thumb.style.backgroundImage = `url('${imgUrl}')`;
-                        thumb.style.backgroundSize = 'cover';
-                        thumb.style.backgroundPosition = 'center';
-                        thumb.style.height = '80px';
-                        thumb.style.borderRadius = '5px';
-                        thumb.style.cursor = 'pointer';
-                        thumb.style.display = 'flex';
-                        thumb.style.alignItems = 'flex-end';
-                        thumb.style.justifyContent = 'center';
-                        thumb.style.color = 'white';
-                        thumb.style.textShadow = '1px 1px 3px black, -1px -1px 3px black';
-                        thumb.style.fontFamily = "Arial, sans-serif";
-                        thumb.style.fontSize = '14px';
-                        thumb.style.paddingBottom = '5px';
+                        thumb.className = 'theme-thumb';
+                        thumb.style.backgroundImage = `url('${url}')`;
                         thumb.innerText = `Фон ${i}`;
-                        
                         thumb.onclick = () => {
-                            document.body.style.backgroundImage = `url('${imgUrl}')`;
+                            document.body.style.backgroundImage = `url('${url}')`;
                             document.body.style.backgroundSize = 'cover';
                             document.body.style.backgroundAttachment = 'fixed';
                             document.body.style.backgroundPosition = 'center';
-                            localStorage.setItem('mySavedGameBg', imgUrl);
+                            localStorage.setItem('mySavedGameBg', url);
+                            document.getElementById('theme-modal').style.display = 'none';
+                            showToast('🖼️ Фон змінено');
                         };
-                        themeGallery.appendChild(thumb);
+                        gallery.appendChild(thumb);
                     } else {
-                        consecutiveFails++;
+                        fails++;
                     }
-                } catch (e) {
-                    consecutiveFails++;
-                }
+                } catch (e) { fails++; }
                 i++;
             }
         }
 
         function initThemeManager() {
-            let savedBg = localStorage.getItem('mySavedGameBg');
-            if (savedBg) {
-                document.body.style.backgroundImage = `url('${savedBg}')`;
+            let saved = localStorage.getItem('mySavedGameBg');
+            if (saved) {
+                document.body.style.backgroundImage = `url('${saved}')`;
             } else {
                 document.body.style.backgroundImage = `url('${defaultBgUrl}')`;
             }
             document.body.style.backgroundSize = 'cover';
             document.body.style.backgroundAttachment = 'fixed';
             document.body.style.backgroundPosition = 'center';
-
             checkAndLoadBackgrounds();
         }
 
-        // Ініціалізація при завантаженні
+        // ==========================================
+        // СТАРТ
+        // ==========================================
         window.onload = () => {
-            loadState(); 
+            loadState();
             initThemeManager();
         };
     </script>
+
 </body>
 </html>
