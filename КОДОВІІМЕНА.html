@@ -9,15 +9,16 @@
     <style>
         /* Базові стилі та архітектура */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Propysy Bold', sans-serif;
+            font-weight: bold;
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background-color: #f0f2f5; /* Нейтральний фон */
+            background-color: #f0f2f5; 
         }
 
         .game-container {
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.9);
             max-width: 900px;
             margin: 20px auto;
             padding: 25px;
@@ -76,7 +77,8 @@
             font-size: 16px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-family: Arial, sans-serif;
+            font-family: 'Propysy Bold', sans-serif;
+            font-weight: bold;
         }
 
         .ai-section button {
@@ -188,7 +190,8 @@
         .progress-controls input {
             padding: 10px;
             font-size: 18px;
-            font-family: Arial, sans-serif;
+            font-family: 'Propysy Bold', sans-serif;
+            font-weight: bold;
             border: 2px solid #ccc;
             border-radius: 5px;
             text-transform: uppercase;
@@ -323,7 +326,7 @@
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            font-family: Arial, sans-serif;
+            font-family: 'Propysy Bold', sans-serif;
         }
         .available-word-btn:hover {
             background: #e0e0e0;
@@ -381,10 +384,10 @@
         </div>
 
         <div class="ai-section">
-            <h3 style="font-family: Arial, sans-serif;">Запит до ШІ (Введіть тему для слів)</h3>
+            <h3 style="font-family: 'Propysy Bold', sans-serif; font-weight: bold;">Запит до ШІ (Введіть тему для слів)</h3>
             <input type="text" id="ai-query" placeholder="Наприклад: Всі іменники на літеру П">
             <button onclick="generateGame()">Створити гру</button>
-            <p style="font-size:12px; color:#666; margin-top:5px; font-family: Arial, sans-serif;">Використовується відкрита нейромережа для генерації контенту</p>
+            <p style="font-size:12px; color:#666; margin-top:5px; font-family: 'Propysy Bold', sans-serif; font-weight: bold;">Використовується відкрита нейромережа для генерації контенту</p>
             
             <div class="font-controls" id="font-controls" style="display: none;">
                 <button onclick="changeFontSize(-2)">А- (Зменшити шрифт)</button>
@@ -442,7 +445,14 @@
                 </div>
             </div>
         </div>
+    </div>
 
+    <!-- Theme Manager UI -->
+    <button id="theme-settings-btn" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; border-radius: 50%; width: 50px; height: 50px; background: white; border: 2px solid #ccc; cursor: pointer; font-size: 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">⚙️</button>
+    
+    <div id="theme-modal" style="display: none; position: fixed; bottom: 80px; right: 20px; z-index: 9998; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); max-height: 60vh; overflow-y: auto; width: 300px;">
+        <h4 style="margin-top:0; text-align:center;">Виберіть фон</h4>
+        <div id="theme-gallery" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
     </div>
 
     <script>
@@ -549,31 +559,19 @@
             try {
                 const prompt = `Напиши рівно 25 окремих слів (іменників) через пробіл на тему: "${query}". БЕЗ розділових знаків, БЕЗ дефісів, БЕЗ нових рядків. Тільки слова.`;
                 
-                // Використовуємо POST-запит (більш надійно для обходу обмежень URL та кешу)
-                const res = await fetch("https://text.pollinations.ai/", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: "system", content: "Ти — генератор слів для настільної гри. Повертай лише список слів, розділених пробілом. Без жодних пояснень чи форматування." },
-                            { role: "user", content: prompt }
-                        ],
-                        seed: Math.floor(Math.random() * 1000000) // Запобігає видачі однакового кешу
-                    })
-                });
+                // Використовуємо надійний GET-запит зі випадковим seed для обходу кешу та уникнення CORS
+                const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${Math.floor(Math.random() * 1000000)}`;
+                const res = await fetch(url);
 
                 if (!res.ok) throw new Error("API не відповідає (status " + res.status + ")");
                 let text = await res.text();
                 
-                // Якщо API повернуло JSON формат (як у OpenAI), дістаємо з нього текст
                 try {
                     const json = JSON.parse(text);
                     if (json.choices && json.choices[0] && json.choices[0].message) {
                         text = json.choices[0].message.content;
                     }
-                } catch(e) { 
-                    // Якщо не JSON, просто продовжуємо з сирим текстом
-                }
+                } catch(e) { }
                 
                 // Залишаємо лише українські літери (додано підтримку апострофа)
                 let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
@@ -646,7 +644,6 @@
         }
 
         function updateWordText(index, newText) {
-            // Додано підтримку апострофа для редагування
             let cleanText = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
             if (cleanText.length > 0) {
                 gameState.words[index] = cleanText;
@@ -656,7 +653,6 @@
             renderProgressPage(); 
         }
 
-        // Керування кольором картки
         function cycleCaptainColor(index, event) {
             event.preventDefault();
 
@@ -666,7 +662,6 @@
             
             gameState.colors[index] = colorOrder[nextIndex];
 
-            // Перерахунок рахунку
             gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, yellow: 0 };
             for(let i = 0; i < 25; i++) {
                 if(!gameState.revealed[i]) {
@@ -746,10 +741,6 @@
             document.getElementById('score-yellow').innerText = gameState.scores.yellow;
         }
 
-        // ==========================================
-        // ХІД ГРИ (Логіка ведення записів та редагування)
-        // ==========================================
-        
         function startNewTurn() {
             let clue = document.getElementById('clue-input').value.trim().toUpperCase();
             let num = document.getElementById('num-input').value.trim();
@@ -759,7 +750,6 @@
                 return;
             }
 
-            // Визначаємо колір: якщо це перший хід, то червоний, інакше чергуємо
             let teamColor = gameState.turns.length % 2 === 0 ? 'red' : 'blue';
 
             gameState.turns.push({ clue: clue, number: num, words: [], team: teamColor });
@@ -775,7 +765,6 @@
         function handleWordReveal(index) {
             if (gameState.revealed[index]) return;
 
-            // Запобіжник: якщо хід ще не створено
             if (gameState.turns.length === 0) {
                 alert("Будь ласка, спершу створіть хід (введіть підказку та натисніть 'Почати хід')!");
                 return;
@@ -784,7 +773,6 @@
             gameState.revealed[index] = true;
             let color = gameState.colors[index];
             
-            // Віднімаємо бал у таблиці
             if (color === 'grey-bg') gameState.scores.grey--;
             else if (color !== 'black') gameState.scores[color]--;
             
@@ -801,13 +789,11 @@
             renderProgressPage();
         }
 
-        // Видалення всього ходу
         function deleteTurn(turnIdx) {
             if(!confirm("Ви впевнені, що хочете видалити цей хід? Всі відкриті в ньому слова будуть закриті, а рахунок відновлено.")) return;
             
             let turn = gameState.turns[turnIdx];
             
-            // Повертаємо всі слова з цього ходу на стіл
             turn.words.forEach(w => {
                 let bIdx = gameState.words.indexOf(w.text);
                 if (bIdx !== -1) {
@@ -818,10 +804,8 @@
                 }
             });
             
-            // Видаляємо хід з масиву
             gameState.turns.splice(turnIdx, 1);
             
-            // Коригуємо активний індекс, якщо потрібно
             if(gameState.activeTurnIndex >= gameState.turns.length) {
                 gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
             }
@@ -832,7 +816,6 @@
             renderProgressPage();
         }
 
-        // Редагування підказки ходу
         function editTurnInfo(turnIdx) {
             let turn = gameState.turns[turnIdx];
             let newClue = prompt("Введіть нову підказку:", turn.clue);
@@ -850,7 +833,6 @@
             renderProgressPage();
         }
 
-        // Керування словами всередині ходу (видалення одного слова)
         function removeWordFromTurn(turnIdx, wordIdx) {
             let wordObj = gameState.turns[turnIdx].words[wordIdx];
             let bIdx = gameState.words.indexOf(wordObj.text);
@@ -870,7 +852,6 @@
             renderProgressPage();
         }
 
-        // Керування словами всередині ходу (переміщення вліво/вправо)
         function moveWordInTurn(turnIdx, wordIdx, dir) {
             let wordsArr = gameState.turns[turnIdx].words;
             if (wordIdx + dir < 0 || wordIdx + dir >= wordsArr.length) return;
@@ -959,9 +940,87 @@
             });
         }
 
+        // ==========================================
+        // СИСТЕМА ДИНАМІЧНИХ ФОНІВ (THEME MANAGER)
+        // ==========================================
+        const bgBaseUrl = 'https://olgazheltvai2.github.io/images/backgrounds/';
+        const themeGallery = document.getElementById('theme-gallery');
+        const themeModal = document.getElementById('theme-modal');
+        const defaultBgUrl = `${bgBaseUrl}background_1.webp`;
+
+        document.getElementById('theme-settings-btn').addEventListener('click', () => {
+            themeModal.style.display = themeModal.style.display === 'none' ? 'block' : 'none';
+        });
+
+        async function checkAndLoadBackgrounds() {
+            let i = 1;
+            let consecutiveFails = 0;
+            
+            while (consecutiveFails < 3 && i <= 1000) {
+                let imgUrl = `${bgBaseUrl}background_${i}.webp`;
+                try {
+                    let exists = await new Promise((resolve) => {
+                        let img = new Image();
+                        img.onload = () => resolve(true);
+                        img.onerror = () => resolve(false);
+                        img.src = imgUrl;
+                    });
+
+                    if (exists) {
+                        consecutiveFails = 0;
+                        let thumb = document.createElement('div');
+                        thumb.style.backgroundImage = `url('${imgUrl}')`;
+                        thumb.style.backgroundSize = 'cover';
+                        thumb.style.backgroundPosition = 'center';
+                        thumb.style.height = '80px';
+                        thumb.style.borderRadius = '5px';
+                        thumb.style.cursor = 'pointer';
+                        thumb.style.display = 'flex';
+                        thumb.style.alignItems = 'flex-end';
+                        thumb.style.justifyContent = 'center';
+                        thumb.style.color = 'white';
+                        thumb.style.textShadow = '1px 1px 3px black, -1px -1px 3px black';
+                        thumb.style.fontFamily = "'Propysy Bold', sans-serif";
+                        thumb.style.fontSize = '14px';
+                        thumb.style.paddingBottom = '5px';
+                        thumb.innerText = `Фон ${i}`;
+                        
+                        thumb.onclick = () => {
+                            document.body.style.backgroundImage = `url('${imgUrl}')`;
+                            document.body.style.backgroundSize = 'cover';
+                            document.body.style.backgroundAttachment = 'fixed';
+                            document.body.style.backgroundPosition = 'center';
+                            localStorage.setItem('mySavedGameBg', imgUrl);
+                        };
+                        themeGallery.appendChild(thumb);
+                    } else {
+                        consecutiveFails++;
+                    }
+                } catch (e) {
+                    consecutiveFails++;
+                }
+                i++;
+            }
+        }
+
+        function initThemeManager() {
+            let savedBg = localStorage.getItem('mySavedGameBg');
+            if (savedBg) {
+                document.body.style.backgroundImage = `url('${savedBg}')`;
+            } else {
+                document.body.style.backgroundImage = `url('${defaultBgUrl}')`;
+            }
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.backgroundPosition = 'center';
+
+            checkAndLoadBackgrounds();
+        }
+
         // Ініціалізація при завантаженні
         window.onload = () => {
             loadState(); 
+            initThemeManager();
         };
     </script>
 </body>
