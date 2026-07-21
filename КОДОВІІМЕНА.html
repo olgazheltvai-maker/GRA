@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кодові Імена</title>
+    <title>Кодові Імена — ШІ генерація</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
     </script>
     <style>
+        /* Стилі залишено без змін, щоб не перевантажувати відповідь */
         * {
             box-sizing: border-box;
         }
@@ -438,15 +439,15 @@
         </div>
 
         <div class="ai-section">
-            <h3 style="font-family: Arial, sans-serif;">Запит до ШІ (Введіть тему для слів)</h3>
+            <h3 style="font-family: Arial, sans-serif;">Запит до ШІ (введіть тему)</h3>
             <input type="text" id="ai-query" placeholder="Наприклад: Всі іменники на літеру П">
             <button onclick="generateGame()">Створити гру</button>
-            <p style="font-size:12px; color:#666; margin-top:5px; font-family: Arial, sans-serif;">Використовується відкрита нейромережа для генерації контенту</p>
+            <p style="font-size:12px; color:#666; margin-top:5px; font-family: Arial, sans-serif;">Генерація через Pollinations AI (з резервним Hugging Face)</p>
 
             <div class="font-controls" id="font-controls" style="display: none;">
-                <button onclick="changeFontSize(-2)">А- (Зменшити шрифт)</button>
-                <button onclick="changeFontSize(2)">А+ (Збільшити шрифт)</button>
-                <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-board')">📷 Скріншот таблички</button>
+                <button onclick="changeFontSize(-2)">А-</button>
+                <button onclick="changeFontSize(2)">А+</button>
+                <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-board')">📷 Скріншот</button>
             </div>
         </div>
 
@@ -459,7 +460,7 @@
 
             <div id="captain-page" class="page active">
                 <div class="grid" id="captain-grid">
-                    <div style="grid-column: span 5; text-align:center; padding: 20px; color:#777;">Введіть тему та натисніть "Створити гру" або продовжіть попередню партію. <br><small>(Щоб змінити колір картки, клікніть по ній правою кнопкою миші)</small></div>
+                    <div style="grid-column: span 5; text-align:center; padding: 20px; color:#777;">Введіть тему та натисніть "Створити гру". <br><small>(Щоб змінити колір картки — правий клік)</small></div>
                 </div>
             </div>
 
@@ -470,19 +471,15 @@
 
         <div id="progress-page" class="page">
             <div class="progress-controls">
-                <input type="text" id="clue-input" placeholder="Підказка (напр. ПТАХ)" style="width: 45%;">
+                <input type="text" id="clue-input" placeholder="Підказка" style="width: 45%;">
                 <input type="number" id="num-input" placeholder="Число" style="width: 80px;" min="1" max="9">
                 <button onclick="startNewTurn()">Почати хід</button>
                 <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-history')">📷 Скріншот ходів</button>
             </div>
 
-            <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 5px;">
-                Спочатку введіть підказку та натисніть "Почати хід", а потім обирайте слова.
-            </p>
-
             <div id="capture-history">
                 <div id="log-area">
-                    <div style="color: #999; text-align: center; font-style: italic;">Тут відображатиметься історія ходів...</div>
+                    <div style="color: #999; text-align: center; font-style: italic;">Історія ходів...</div>
                 </div>
             </div>
 
@@ -540,11 +537,11 @@
         }
 
         // ==========================================
-        // ТОАСТ-ПОВІДОМЛЕННЯ
+        // ТОАСТ
         // ==========================================
         let toastTimer = null;
 
-        function showToast(msg, duration = 3000) {
+        function showToast(msg, duration = 3500) {
             const el = document.getElementById('toast');
             el.textContent = msg;
             el.classList.add('show');
@@ -565,13 +562,13 @@
                     try {
                         const item = new ClipboardItem({ 'image/png': blob });
                         await navigator.clipboard.write([item]);
-                        showToast('✅ Скріншот скопійовано в буфер обміну!');
+                        showToast('✅ Скріншот скопійовано!');
                     } catch (err) {
-                        showToast('❌ Не вдалося скопіювати: ' + err.message, 4000);
+                        showToast('❌ Помилка копіювання: ' + err.message, 4000);
                     }
                 });
             } catch (err) {
-                showToast('❌ Помилка скріншоту: ' + err.message, 4000);
+                showToast('❌ Помилка скріншоту', 4000);
             } finally {
                 element.style.background = originalBg;
             }
@@ -587,9 +584,6 @@
             element.classList.add('active');
         }
 
-        // ==========================================
-        // РОЗМІР ШРИФТУ
-        // ==========================================
         function changeFontSize(step) {
             gameState.currentFontSize = Math.min(36, Math.max(10, gameState.currentFontSize + step));
             document.querySelectorAll('.word-card, .turn-word-tag, .available-word-btn, .turn-clue').forEach(el => {
@@ -600,109 +594,131 @@
         }
 
         // ==========================================
-        // ШІ ГЕНЕРАЦІЯ (виправлено — надійний GET із таймаутом)
+        // ШІ ГЕНЕРАЦІЯ — два джерела
         // ==========================================
+        async function fetchFromPollinations(query) {
+            const prompt =
+                `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
+            const url =
+                `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+            if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+            return await res.text();
+        }
+
+        async function fetchFromHuggingFace(query) {
+            const prompt =
+                `Generate exactly 25 Ukrainian nouns related to "${query}". Return only words separated by spaces, no extra text.`;
+            const response = await fetch(
+                "https://api-inference.huggingface.co/models/google/flan-t5-base", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        inputs: prompt,
+                        parameters: { max_length: 200, temperature: 0.8 }
+                    }),
+                    signal: AbortSignal.timeout(20000)
+                }
+            );
+            if (!response.ok) throw new Error(`HuggingFace HTTP ${response.status}`);
+            const data = await response.json();
+            // data може бути масивом або об'єктом, витягуємо текст
+            let text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text;
+            if (!text) throw new Error('Порожня відповідь від HuggingFace');
+            return text;
+        }
+
+        function extractWords(text) {
+            let raw = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
+                .toUpperCase()
+                .split(/\s+/)
+                .filter(w => w.length > 1);
+            return [...new Set(raw)];
+        }
+
         async function fetchAIWords(query) {
-            const fallbackWords = [
-                "ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА",
-                "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ",
-                "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ",
-                "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ",
-                "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"
-            ];
-
+            // Спроба 1: Pollinations
             try {
-                // Формуємо запит до Pollinations (GET — підтримує CORS)
-                const prompt =
-                    `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
-                const url =
-                    `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд
-
-                const res = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
-
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-                const text = await res.text();
-
-                // Очищаємо та витягуємо слова
-                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
-                    .toUpperCase()
-                    .split(/\s+/)
-                    .filter(w => w.length > 1);
-
-                let words = [...new Set(rawWords)];
-
-                // Добираємо до 25 з резерву
-                let shuffledFallback = [...fallbackWords].sort(() => Math.random() - 0.5);
-                let idx = 0;
-                while (words.length < 25 && idx < shuffledFallback.length) {
-                    if (!words.includes(shuffledFallback[idx])) {
-                        words.push(shuffledFallback[idx]);
-                    }
-                    idx++;
-                }
-                while (words.length < 25) {
-                    words.push(fallbackWords[Math.floor(Math.random() * fallbackWords.length)]);
-                }
-
-                return words.slice(0, 25);
-            } catch (error) {
-                console.warn('ШІ не відповів:', error.message);
-                showToast('⚠️ ШІ не відповів, використано резервні слова', 4000);
-                // Повертаємо резервний список
-                let shuffled = [...fallbackWords].sort(() => Math.random() - 0.5);
-                return shuffled.slice(0, 25);
+                const text = await fetchFromPollinations(query);
+                const words = extractWords(text);
+                if (words.length >= 25) return words.slice(0, 25);
+                console.warn('Pollinations повернув менше 25 слів, пробуємо HuggingFace');
+            } catch (e) {
+                console.warn('Pollinations помилка:', e.message);
             }
+
+            // Спроба 2: Hugging Face
+            try {
+                const text = await fetchFromHuggingFace(query);
+                const words = extractWords(text);
+                if (words.length >= 25) return words.slice(0, 25);
+                console.warn('HuggingFace повернув менше 25 слів');
+            } catch (e) {
+                console.warn('HuggingFace помилка:', e.message);
+            }
+
+            // Якщо обидва не спрацювали — кидаємо помилку
+            throw new Error('Жоден з ШІ-сервісів не відповів. Спробуйте пізніше.');
         }
 
         // ==========================================
-        // СТВОРЕННЯ ГРИ
+        // СТВОРЕННЯ ГРИ (тільки ШІ)
         // ==========================================
         async function generateGame() {
             const query = document.getElementById('ai-query').value || 'Гра';
             const grid = document.getElementById('captain-grid');
             grid.innerHTML =
-                `<h3 style="grid-column: span 5; text-align:center;">⏳ ШІ підбирає слова за запитом «${query}»...</h3>`;
+                `<h3 style="grid-column: span 5; text-align:center;">⏳ ШІ генерує слова за запитом «${query}»...</h3>`;
             document.getElementById('font-controls').style.display = 'none';
 
-            let fetchedWords = await fetchAIWords(query);
+            try {
+                let fetchedWords = await fetchAIWords(query);
 
-            let colors = [
-                ...Array(9).fill('red'),
-                ...Array(9).fill('blue'),
-                'green',
-                'yellow',
-                'grey-bg',
-                ...Array(4).fill('black')
-            ];
-            colors = colors.sort(() => Math.random() - 0.5);
+                let colors = [
+                    ...Array(9).fill('red'),
+                    ...Array(9).fill('blue'),
+                    'green',
+                    'yellow',
+                    'grey-bg',
+                    ...Array(4).fill('black')
+                ];
+                colors = colors.sort(() => Math.random() - 0.5);
 
-            gameState = {
-                words: fetchedWords,
-                colors: colors,
-                revealed: Array(25).fill(false),
-                scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
-                turns: [],
-                activeTurnIndex: 0,
-                currentFontSize: gameState.currentFontSize || 16
-            };
+                gameState = {
+                    words: fetchedWords,
+                    colors: colors,
+                    revealed: Array(25).fill(false),
+                    scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
+                    turns: [],
+                    activeTurnIndex: 0,
+                    currentFontSize: gameState.currentFontSize || 16
+                };
 
-            saveState();
-            document.getElementById('score-board').style.display = 'block';
-            document.getElementById('font-controls').style.display = 'flex';
-            updateScoreBoard();
-            renderCaptainBoard();
-            renderPlayerBoard();
-            renderProgressPage();
-            showToast('✅ Гра створена!');
+                saveState();
+                document.getElementById('score-board').style.display = 'block';
+                document.getElementById('font-controls').style.display = 'flex';
+                updateScoreBoard();
+                renderCaptainBoard();
+                renderPlayerBoard();
+                renderProgressPage();
+                showToast('✅ Гра створена за допомогою ШІ!');
+            } catch (error) {
+                console.error('Помилка генерації:', error);
+                grid.innerHTML =
+                    `<div style="grid-column: span 5; text-align:center; padding:30px; color:#d32f2f;">
+                        <h3>❌ Не вдалося отримати слова від ШІ</h3>
+                        <p style="color:#666;">Спробуйте:<br>
+                        • Перевірити інтернет-з'єднання<br>
+                        • Змінити тему запиту<br>
+                        • Повторити спробу через хвилину</p>
+                        <button onclick="generateGame()" style="padding:10px 30px; background:#333; color:#fff; border:none; border-radius:5px; cursor:pointer;">Повторити</button>
+                    </div>`;
+                showToast('❌ ШІ недоступний, спробуйте пізніше', 5000);
+            }
         }
 
         // ==========================================
-        // РЕНДЕРИНГ ДОШОК
+        // РЕНДЕРИНГ (без змін)
         // ==========================================
         function updateWordText(index, newText) {
             let clean = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
@@ -746,7 +762,7 @@
                 card.style.fontSize = gameState.currentFontSize + 'px';
                 card.innerText = word;
                 card.contentEditable = 'true';
-                card.title = 'Клікніть правою кнопкою миші, щоб змінити колір';
+                card.title = 'Правий клік — зміна кольору';
                 card.oncontextmenu = (e) => cycleCaptainColor(index, e);
                 card.onblur = () => { updateWordText(index, card.innerText);
                     card.innerText = gameState.words[index]; };
@@ -824,7 +840,7 @@
         }
 
         function deleteTurn(turnIdx) {
-            if (!confirm('Ви впевнені, що хочете видалити цей хід?')) return;
+            if (!confirm('Видалити цей хід?')) return;
             let turn = gameState.turns[turnIdx];
             turn.words.forEach(w => {
                 let idx = gameState.words.indexOf(w.text);
@@ -848,9 +864,9 @@
 
         function editTurnInfo(turnIdx) {
             let turn = gameState.turns[turnIdx];
-            let newClue = prompt('Введіть нову підказку:', turn.clue);
+            let newClue = prompt('Нова підказка:', turn.clue);
             if (newClue !== null && newClue.trim() !== '') turn.clue = newClue.trim().toUpperCase();
-            let newNum = prompt('Введіть нове число (або порожнє):', turn.number);
+            let newNum = prompt('Нове число:', turn.number);
             if (newNum !== null) turn.number = newNum.trim();
             saveState();
             renderProgressPage();
