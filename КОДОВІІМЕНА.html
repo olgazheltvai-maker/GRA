@@ -558,60 +558,36 @@
         async function fetchAIWords(query) {
             try {
                 let text = null;
-                // Явно вказуємо мову, щоб уникнути автоперекладу ШІ
-                const prompt = `Згенеруй 25 іменників ВИКЛЮЧНО українською мовою на тему: "${query}". Поверни тільки слова, розділені пробілом. Без ком, без цифр, без перекладу англійською.`;
+                const prompt = `Напиши 25 окремих слів (іменників) українською мовою на тему: "${query}". Тільки слова, розділені пробілом. Без ком, без цифр, без перекладу.`;
+                const encodedPrompt = encodeURIComponent(prompt);
+                const seed = Math.floor(Math.random() * 100000);
+                const aiUrl = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}`;
 
-                // Метод 1: POST-запит (більш стабільний для складних запитів)
+                // Метод 1: Проксі AllOrigins (Найкраще обходить CORS, особливо якщо ви запускаєте з файлу)
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд на відповідь
-                    
-                    const res = await fetch("https://text.pollinations.ai/", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            messages: [
-                                { role: "system", content: "Ти помічник, який генерує слова для гри виключно українською мовою. Заборонено використовувати будь-які інші мови." },
-                                { role: "user", content: prompt }
-                            ],
-                            seed: Math.floor(Math.random() * 100000)
-                        }),
-                        signal: controller.signal
-                    });
-                    
-                    clearTimeout(timeoutId);
+                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(aiUrl)}`);
                     if (res.ok) text = await res.text();
-                } catch(e) {
-                    console.log("POST failed, attempting GET...");
-                }
+                } catch(e) { console.log("Proxy 1 failed"); }
 
-                // Метод 2: Резервний GET-запит
+                // Метод 2: Проксі CodeTabs
                 if (!text) {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000);
-                    
                     try {
-                        const encodedPrompt = encodeURIComponent(prompt);
-                        const res = await fetch(`https://text.pollinations.ai/${encodedPrompt}?seed=${Math.floor(Math.random() * 100000)}`, {
-                            signal: controller.signal
-                        });
-                        clearTimeout(timeoutId);
+                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(aiUrl)}`);
                         if (res.ok) text = await res.text();
-                    } catch(e) {
-                        console.log("GET failed...");
-                    }
+                    } catch(e) { console.log("Proxy 2 failed"); }
                 }
 
-                if (!text) throw new Error("Сервер ШІ не відповідає або запит заблоковано.");
+                // Метод 3: Прямий GET-запит
+                if (!text) {
+                    try {
+                        const res = await fetch(aiUrl);
+                        if (res.ok) text = await res.text();
+                    } catch(e) { console.log("Direct fetch failed"); }
+                }
+
+                if (!text) throw new Error("Усі методи підключення до ШІ вичерпано (ймовірно, блокування CORS або провайдера).");
                 
-                try {
-                    const json = JSON.parse(text);
-                    if (json.choices && json.choices[0] && json.choices[0].message) {
-                        text = json.choices[0].message.content;
-                    }
-                } catch(e) { }
-                
-                // Фільтруємо результат: лише українські літери
+                // Очищення результату
                 let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
                                    .toUpperCase()
                                    .split(/\s+/)
@@ -637,7 +613,7 @@
                 return words.slice(0, 25);
             } catch (error) {
                 console.error("Помилка ШІ API:", error);
-                alert("Не вдалося звернутися до ШІ (перевірте підключення або спробуйте пізніше). Буде використано резервний набір слів.");
+                alert("Не вдалося звернутися до ШІ (блокування мережі). Буде використано резервний набір слів.");
                 let fw = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
                 return fw.sort(() => Math.random() - 0.5);
             }
