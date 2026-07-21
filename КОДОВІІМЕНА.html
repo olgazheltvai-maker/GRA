@@ -554,47 +554,53 @@
             saveState();
         }
 
-        // ШІ генерація
+        // Генерація слів без блокування браузером
         async function fetchAIWords(query) {
             try {
-                let text = null;
-                const prompt = `Напиши 25 окремих слів (іменників) українською мовою на тему: "${query}". Тільки слова, розділені пробілом. Без ком, без цифр, без перекладу.`;
-                const encodedPrompt = encodeURIComponent(prompt);
-                const seed = Math.floor(Math.random() * 100000);
-                const aiUrl = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}`;
-
-                // Метод 1: Проксі AllOrigins (Найкраще обходить CORS, особливо якщо ви запускаєте з файлу)
+                let words = [];
+                
+                // Метод 1: Вікіпедія API (Найнадійніший, без CORS, не блокується браузерами, дає слова по темі)
                 try {
-                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(aiUrl)}`);
-                    if (res.ok) text = await res.text();
-                } catch(e) { console.log("Proxy 1 failed"); }
+                    const wikiUrl = `https://uk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=50&format=json&origin=*`;
+                    const res = await fetch(wikiUrl);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.query && data.query.search) {
+                            data.query.search.forEach(item => {
+                                // Витягуємо текст із заголовків та уривків статей
+                                let combinedText = item.title + " " + item.snippet.replace(/<[^>]+>/g, '');
+                                let extracted = combinedText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ').toUpperCase().split(/\s+/);
+                                extracted.forEach(w => {
+                                    // Відбираємо унікальні слова адекватної довжини
+                                    if (w.length > 3 && w.length < 12 && !words.includes(w)) {
+                                        words.push(w);
+                                    }
+                                });
+                            });
+                        }
+                    }
+                } catch(e) { console.log("Wiki fetch failed"); }
 
-                // Метод 2: Проксі CodeTabs
-                if (!text) {
+                // Метод 2: Якщо Вікіпедія не дала достатньо слів, пробуємо Pollinations (ШІ)
+                if (words.length < 25) {
                     try {
-                        const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(aiUrl)}`);
-                        if (res.ok) text = await res.text();
-                    } catch(e) { console.log("Proxy 2 failed"); }
-                }
-
-                // Метод 3: Прямий GET-запит
-                if (!text) {
-                    try {
+                        const prompt = `Напиши 25 окремих слів (іменників) українською мовою на тему: "${query}". Тільки слова, розділені пробілом. Без ком, без цифр, без перекладу.`;
+                        const aiUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${Math.floor(Math.random() * 100000)}`;
                         const res = await fetch(aiUrl);
-                        if (res.ok) text = await res.text();
-                    } catch(e) { console.log("Direct fetch failed"); }
+                        if (res.ok) {
+                            let text = await res.text();
+                            let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ').toUpperCase().split(/\s+/);
+                            rawWords.forEach(w => {
+                                if (w.length > 2 && !words.includes(w)) words.push(w);
+                            });
+                        }
+                    } catch(e) { console.log("AI fetch failed"); }
                 }
 
-                if (!text) throw new Error("Усі методи підключення до ШІ вичерпано (ймовірно, блокування CORS або провайдера).");
-                
-                // Очищення результату
-                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
-                                   .toUpperCase()
-                                   .split(/\s+/)
-                                   .filter(w => w.length > 2); 
-                
-                let words = [...new Set(rawWords)];
+                // Перемішуємо отримані слова
+                words = words.sort(() => Math.random() - 0.5);
 
+                // Метод 3: Резервний список на випадок відсутності інтернету
                 let fallbackWords = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА", "КОСМОС", "ГАЛАКТИКА", "КОМЕТА", "АСТЕРОЇД"];
                 fallbackWords = fallbackWords.sort(() => Math.random() - 0.5);
                 
@@ -612,16 +618,16 @@
 
                 return words.slice(0, 25);
             } catch (error) {
-                console.error("Помилка ШІ API:", error);
-                alert("Не вдалося звернутися до ШІ (блокування мережі). Буде використано резервний набір слів.");
+                console.error("Помилка генерації слів:", error);
+                alert("Не вдалося звернутися до мережі. Буде використано резервний набір слів.");
                 let fw = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
-                return fw.sort(() => Math.random() - 0.5);
+                return fw.sort(() => Math.random() - 0.5).slice(0, 25);
             }
         }
 
         async function generateGame() {
             const query = document.getElementById('ai-query').value || "Гра";
-            document.getElementById('captain-grid').innerHTML = "<h3 style='grid-column: span 5; text-align:center;'>ШІ підбирає слова (це може зайняти кілька секунд)...</h3>";
+            document.getElementById('captain-grid').innerHTML = "<h3 style='grid-column: span 5; text-align:center;'>Мережа підбирає слова (це може зайняти кілька секунд)...</h3>";
             document.getElementById('font-controls').style.display = 'none';
             
             let fetchedWords = await fetchAIWords(query);
