@@ -320,6 +320,8 @@
             pointer-events: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             font-family: Arial, sans-serif;
+            max-width: 90vw;
+            text-align: center;
         }
         .toast.show {
             opacity: 1;
@@ -542,7 +544,7 @@
         // ==========================================
         let toastTimer = null;
 
-        function showToast(msg, duration = 2500) {
+        function showToast(msg, duration = 3000) {
             const el = document.getElementById('toast');
             el.textContent = msg;
             el.classList.add('show');
@@ -598,7 +600,7 @@
         }
 
         // ==========================================
-        // ШІ ГЕНЕРАЦІЯ (виправлено)
+        // ШІ ГЕНЕРАЦІЯ (виправлено — надійний GET із таймаутом)
         // ==========================================
         async function fetchAIWords(query) {
             const fallbackWords = [
@@ -610,16 +612,21 @@
             ];
 
             try {
-                // Використовуємо правильний ендпоінт Pollinations з GET-запитом (підтримує CORS)
+                // Формуємо запит до Pollinations (GET — підтримує CORS)
                 const prompt =
                     `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
                 const url =
                     `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
 
-                const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд
+
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-                let text = await res.text();
+                const text = await res.text();
 
                 // Очищаємо та витягуємо слова
                 let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
@@ -644,8 +651,9 @@
 
                 return words.slice(0, 25);
             } catch (error) {
-                console.warn('ШІ не відповів, використовуємо резерв:', error.message);
-                // Без алерту — тихо використовуємо резерв
+                console.warn('ШІ не відповів:', error.message);
+                showToast('⚠️ ШІ не відповів, використано резервні слова', 4000);
+                // Повертаємо резервний список
                 let shuffled = [...fallbackWords].sort(() => Math.random() - 0.5);
                 return shuffled.slice(0, 25);
             }
