@@ -548,24 +548,60 @@
         async function fetchAIWords(query) {
             try {
                 const prompt = `Напиши рівно 25 окремих слів (іменників) через пробіл на тему: "${query}". БЕЗ розділових знаків, БЕЗ дефісів, БЕЗ нових рядків. Тільки слова.`;
-                const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-                const text = await res.text();
                 
-                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ]/gi, ' ')
+                // Використовуємо POST-запит (більш надійно для обходу обмежень URL та кешу)
+                const res = await fetch("https://text.pollinations.ai/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        messages: [
+                            { role: "system", content: "Ти — генератор слів для настільної гри. Повертай лише список слів, розділених пробілом. Без жодних пояснень чи форматування." },
+                            { role: "user", content: prompt }
+                        ],
+                        seed: Math.floor(Math.random() * 1000000) // Запобігає видачі однакового кешу
+                    })
+                });
+
+                if (!res.ok) throw new Error("API не відповідає (status " + res.status + ")");
+                let text = await res.text();
+                
+                // Якщо API повернуло JSON формат (як у OpenAI), дістаємо з нього текст
+                try {
+                    const json = JSON.parse(text);
+                    if (json.choices && json.choices[0] && json.choices[0].message) {
+                        text = json.choices[0].message.content;
+                    }
+                } catch(e) { 
+                    // Якщо не JSON, просто продовжуємо з сирим текстом
+                }
+                
+                // Залишаємо лише українські літери (додано підтримку апострофа)
+                let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
                                    .toUpperCase()
                                    .split(/\s+/)
                                    .filter(w => w.length > 2); 
                 
                 let words = [...new Set(rawWords)];
 
-                let fallbackWords = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
+                let fallbackWords = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА", "КОСМОС", "ГАЛАКТИКА", "КОМЕТА", "АСТЕРОЇД"];
+                fallbackWords = fallbackWords.sort(() => Math.random() - 0.5);
+                
+                let i = 0;
+                while(words.length < 25 && i < fallbackWords.length) {
+                    if (!words.includes(fallbackWords[i])) {
+                        words.push(fallbackWords[i]);
+                    }
+                    i++;
+                }
+
                 while(words.length < 25) {
-                    words.push(fallbackWords[words.length % fallbackWords.length]);
+                    words.push(fallbackWords[Math.floor(Math.random() * fallbackWords.length)]);
                 }
 
                 return words.slice(0, 25);
             } catch (error) {
                 console.error("Помилка ШІ API:", error);
+                alert("Не вдалося звернутися до ШІ (перевірте підключення або спробуйте пізніше). Буде використано резервний набір слів.");
                 let fw = ["ВІКНО", "ПОЛЕ", "ПЕТЛЯ", "ГРУПА", "КАПСУЛА", "ПАСТА", "ПАКЕТ", "БАРАБАН", "КРИШКА", "МАТРИЦЯ", "КЛУБ", "КОЛО", "КАМЕРА", "БУКЕТ", "МОДЕЛЬ", "ВУШКО", "СХОДИ", "СТОРІНКА", "ДІРКА", "ПАНЕЛЬ", "ДНО", "КАНАЛ", "ПАРТІЯ", "КАДР", "СВІЧКА"];
                 return fw.sort(() => Math.random() - 0.5);
             }
@@ -610,7 +646,8 @@
         }
 
         function updateWordText(index, newText) {
-            let cleanText = newText.replace(/[^А-Яа-яЄєІіЇїҐґ]/gi, '').toUpperCase();
+            // Додано підтримку апострофа для редагування
+            let cleanText = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
             if (cleanText.length > 0) {
                 gameState.words[index] = cleanText;
             }
