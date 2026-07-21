@@ -557,52 +557,52 @@
         // ШІ генерація
         async function fetchAIWords(query) {
             try {
-                const prompt = `Напиши 25 слів (іменників) українською мовою на тему: "${query}". Тільки слова через пробіл. Без цифр і ком.`;
-                const encodedPrompt = encodeURIComponent(prompt);
                 let text = null;
+                // Явно вказуємо мову, щоб уникнути автоперекладу ШІ
+                const prompt = `Згенеруй 25 іменників ВИКЛЮЧНО українською мовою на тему: "${query}". Поверни тільки слова, розділені пробілом. Без ком, без цифр, без перекладу англійською.`;
 
-                // Функція для запиту з таймаутом (щоб гра не зависала, якщо сервер ШІ "думає" нескінченно)
-                const fetchTimeout = (url, options, timeout = 7000) => {
-                    return Promise.race([
-                        fetch(url, options),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-                    ]);
-                };
-
-                // Спроба 1: Прямий GET запит
+                // Метод 1: POST-запит (більш стабільний для складних запитів)
                 try {
-                    let r1 = await fetchTimeout(`https://text.pollinations.ai/${encodedPrompt}?seed=${Math.floor(Math.random() * 10000)}`);
-                    if (r1.ok) text = await r1.text();
-                } catch(e) {}
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд на відповідь
+                    
+                    const res = await fetch("https://text.pollinations.ai/", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            messages: [
+                                { role: "system", content: "Ти помічник, який генерує слова для гри виключно українською мовою. Заборонено використовувати будь-які інші мови." },
+                                { role: "user", content: prompt }
+                            ],
+                            seed: Math.floor(Math.random() * 100000)
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    if (res.ok) text = await res.text();
+                } catch(e) {
+                    console.log("POST failed, attempting GET...");
+                }
 
-                // Спроба 2: Прямий POST запит (якщо GET заблоковано)
+                // Метод 2: Резервний GET-запит
                 if (!text) {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
                     try {
-                        let r2 = await fetchTimeout("https://text.pollinations.ai/", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                messages: [{ role: "user", content: prompt }],
-                                seed: Math.floor(Math.random() * 10000)
-                            })
+                        const encodedPrompt = encodeURIComponent(prompt);
+                        const res = await fetch(`https://text.pollinations.ai/${encodedPrompt}?seed=${Math.floor(Math.random() * 100000)}`, {
+                            signal: controller.signal
                         });
-                        if (r2.ok) text = await r2.text();
-                    } catch(e) {}
+                        clearTimeout(timeoutId);
+                        if (res.ok) text = await res.text();
+                    } catch(e) {
+                        console.log("GET failed...");
+                    }
                 }
 
-                // Спроба 3: Запит через проксі (якщо провайдер або CORS повністю блокують Pollinations)
-                if (!text) {
-                    try {
-                        let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://text.pollinations.ai/${encodedPrompt}`)}`;
-                        let r3 = await fetchTimeout(proxyUrl);
-                        if (r3.ok) {
-                            let data = await r3.json();
-                            text = data.contents;
-                        }
-                    } catch(e) {}
-                }
-
-                if (!text) throw new Error("Усі методи підключення до ШІ вичерпано");
+                if (!text) throw new Error("Сервер ШІ не відповідає або запит заблоковано.");
                 
                 try {
                     const json = JSON.parse(text);
@@ -611,7 +611,7 @@
                     }
                 } catch(e) { }
                 
-                // Залишаємо лише українські літери (додано підтримку апострофа)
+                // Фільтруємо результат: лише українські літери
                 let rawWords = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, ' ')
                                    .toUpperCase()
                                    .split(/\s+/)
