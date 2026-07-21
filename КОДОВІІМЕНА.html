@@ -557,14 +557,52 @@
         // ШІ генерація
         async function fetchAIWords(query) {
             try {
-                const prompt = `Напиши рівно 25 окремих слів (іменників) через пробіл на тему: "${query}". БЕЗ розділових знаків, БЕЗ дефісів, БЕЗ нових рядків. Тільки слова.`;
-                
-                // Використовуємо надійний GET-запит зі випадковим seed для обходу кешу та уникнення CORS
-                const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${Math.floor(Math.random() * 1000000)}`;
-                const res = await fetch(url);
+                const prompt = `Напиши 25 слів (іменників) українською мовою на тему: "${query}". Тільки слова через пробіл. Без цифр і ком.`;
+                const encodedPrompt = encodeURIComponent(prompt);
+                let text = null;
 
-                if (!res.ok) throw new Error("API не відповідає (status " + res.status + ")");
-                let text = await res.text();
+                // Функція для запиту з таймаутом (щоб гра не зависала, якщо сервер ШІ "думає" нескінченно)
+                const fetchTimeout = (url, options, timeout = 7000) => {
+                    return Promise.race([
+                        fetch(url, options),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+                    ]);
+                };
+
+                // Спроба 1: Прямий GET запит
+                try {
+                    let r1 = await fetchTimeout(`https://text.pollinations.ai/${encodedPrompt}?seed=${Math.floor(Math.random() * 10000)}`);
+                    if (r1.ok) text = await r1.text();
+                } catch(e) {}
+
+                // Спроба 2: Прямий POST запит (якщо GET заблоковано)
+                if (!text) {
+                    try {
+                        let r2 = await fetchTimeout("https://text.pollinations.ai/", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                messages: [{ role: "user", content: prompt }],
+                                seed: Math.floor(Math.random() * 10000)
+                            })
+                        });
+                        if (r2.ok) text = await r2.text();
+                    } catch(e) {}
+                }
+
+                // Спроба 3: Запит через проксі (якщо провайдер або CORS повністю блокують Pollinations)
+                if (!text) {
+                    try {
+                        let proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://text.pollinations.ai/${encodedPrompt}`)}`;
+                        let r3 = await fetchTimeout(proxyUrl);
+                        if (r3.ok) {
+                            let data = await r3.json();
+                            text = data.contents;
+                        }
+                    } catch(e) {}
+                }
+
+                if (!text) throw new Error("Усі методи підключення до ШІ вичерпано");
                 
                 try {
                     const json = JSON.parse(text);
