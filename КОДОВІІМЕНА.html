@@ -3,523 +3,1036 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кодові Імена — ШІ генерація (API-ключ)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Кодові Імена — Безкоштовний ШІ (3 сервіси)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+    </script>
     <style>
-        /* (стилі ті ж, що й раніше, скорочено для економії місця) */
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; margin:0; padding:0; min-height:100vh; background-color:#f0f2f5; }
-        .game-container { background:rgba(255,255,255,0.92); max-width:960px; margin:20px auto; padding:25px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.12); position:relative; }
-        .tabs { display:flex; gap:10px; margin-bottom:20px; border-bottom:2px solid #ccc; padding-bottom:10px; flex-wrap:wrap; }
-        .tab { padding:10px 20px; cursor:pointer; background:#e0e0e0; border:1px solid #ccc; border-radius:5px; font-weight:bold; transition:0.2s; text-align:center; user-select:none; }
-        .tab.active { background:#fff; border-color:#aaa; box-shadow:0 -3px 5px rgba(0,0,0,0.08); }
-        .page { display:none; }
-        .page.active { display:block; }
-        .ai-section { margin-bottom:25px; padding:15px; background:#f9f9f9; border:1px solid #ddd; border-radius:8px; text-align:center; }
-        .ai-section input[type="text"], .ai-section input[type="password"] { padding:10px; width:60%; font-size:16px; border:1px solid #ccc; border-radius:5px; margin:5px; }
-        .ai-section button { padding:10px 20px; font-size:16px; cursor:pointer; background:#333; color:white; border:none; border-radius:5px; font-weight:bold; margin:5px; }
-        .font-controls { margin-top:15px; display:flex; justify-content:center; flex-wrap:wrap; gap:10px; }
-        .screenshot-btn { background:#008cba !important; color:white !important; }
-        #capture-board { background:transparent; padding:10px; border-radius:8px; }
-        .score-board { text-align:center; font-size:36px; font-weight:bold; margin-bottom:20px; }
-        .grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
-        .word-card { background:#fff; border:2px solid #ddd; border-radius:6px; height:48px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:bold; text-transform:uppercase; cursor:pointer; user-select:none; transition:transform 0.1s, background-color 0.2s; text-align:center; padding:2px 5px; overflow:hidden; word-break:break-word; line-height:1.1; }
-        .word-card:active { transform:scale(0.95); }
-        .word-card[contenteditable="true"] { cursor:text; border:2px dashed #999; }
-        .word-card[contenteditable="true"]:focus { outline:none; background-color:#ffffe0; border-color:#333; }
-        .color-red { color:#ff0000; }
-        .color-blue { color:#00a8ff; }
-        .color-green { color:#00b050; }
-        .color-yellow { color:#ffc000; }
-        .color-black { color:#000000; }
-        .color-grey-bg { background-color:#a6a6a6 !important; color:#000 !important; }
-        .color-grey-text { color:#808080 !important; }
-        .progress-controls { display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
-        .progress-controls input { padding:10px; font-size:18px; border:2px solid #ccc; border-radius:5px; text-transform:uppercase; }
-        .progress-controls button { padding:10px 20px; font-size:16px; font-weight:bold; background:#00b050; color:white; border:none; border-radius:5px; cursor:pointer; }
-        #capture-history { background:transparent; padding:15px; border-radius:8px; margin-bottom:20px; }
-        #log-area { background:rgba(255,255,255,0.95); border:2px solid #ddd; border-radius:8px; padding:20px; min-height:150px; font-size:20px; line-height:1.6; }
-        .turn-row { margin-bottom:10px; border-bottom:1px dashed #eee; padding:10px; border-radius:5px; transition:background-color 0.2s; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-        .turn-row:hover { background-color:#f9f9f9; }
-        .turn-row.active-turn { background-color:#e6f7ff; border-left:5px solid #00a8ff; }
-        .turn-clue-container { display:flex; align-items:center; margin-right:15px; }
-        .turn-clue { font-weight:bold; margin-right:5px; }
-        .turn-action-btn { cursor:pointer; font-size:0.8em; margin-left:5px; color:#666; background:#fff; border:1px solid #ccc; border-radius:3px; padding:2px 6px; transition:0.2s; }
-        .turn-action-btn:hover { background:#eee; color:#000; }
-        .turn-action-btn.del:hover { color:#ff0000; border-color:#ff0000; }
-        .turn-word-tag { display:inline-flex; align-items:center; background:#fff; border:1px solid #ccc; padding:3px 8px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
-        .turn-word-ctrl { cursor:pointer; font-size:0.8em; margin-left:5px; color:#888; user-select:none; transition:color 0.2s; }
-        .turn-word-ctrl:hover { color:#333; }
-        .turn-word-ctrl.del:hover { color:#ff0000; }
-        .available-words-section { background:rgba(249,249,249,0.9); padding:15px; border-radius:8px; border:1px solid #ddd; }
-        .available-words-grid { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px; }
-        .available-word-btn { padding:8px 15px; background:#fff; border:1px solid #aaa; border-radius:5px; font-weight:bold; cursor:pointer; text-transform:uppercase; font-family:Arial, sans-serif; }
-        .available-word-btn:hover { background:#e0e0e0; }
-        .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:12px 24px; border-radius:8px; font-size:16px; z-index:99999; opacity:0; transition:opacity 0.4s ease; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,0.3); max-width:90vw; text-align:center; }
-        .toast.show { opacity:1; }
-        #theme-settings-btn { position:fixed; bottom:20px; right:20px; z-index:9999; border-radius:50%; width:50px; height:50px; background:white; border:2px solid #ccc; cursor:pointer; font-size:24px; box-shadow:0 2px 5px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; transition:0.2s; }
-        #theme-settings-btn:hover { transform:scale(1.05); }
-        #theme-modal { display:none; position:fixed; bottom:80px; right:20px; z-index:9998; background:white; padding:15px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.2); max-height:60vh; overflow-y:auto; width:300px; }
-        #theme-gallery { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        .theme-thumb { height:80px; border-radius:5px; cursor:pointer; background-size:cover; background-position:center; display:flex; align-items:flex-end; justify-content:center; color:#fff; text-shadow:1px 1px 3px #000,-1px -1px 3px #000; font-size:13px; padding-bottom:5px; font-family:Arial, sans-serif; transition:0.15s; border:2px solid transparent; }
-        .theme-thumb:hover { border-color:#008cba; transform:scale(1.02); }
-        @media (max-width:768px) { /* адаптивність */ }
+        /* ====== СТИЛІ (скорочені, але повні) ====== */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+        }
+        .game-container {
+            background: rgba(255, 255, 255, 0.92);
+            max-width: 960px;
+            margin: 20px auto;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+            position: relative;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: 0.2s;
+            text-align: center;
+            user-select: none;
+        }
+        .tab.active {
+            background: #fff;
+            border-color: #aaa;
+            box-shadow: 0 -3px 5px rgba(0, 0, 0, 0.08);
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .ai-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .ai-section input {
+            padding: 10px;
+            width: 60%;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .ai-section button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .font-controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .font-controls button {
+            background: #e0e0e0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .screenshot-btn {
+            background: #008cba !important;
+            color: white !important;
+        }
+        #capture-board {
+            background: transparent;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .score-board {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .word-card {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s, background-color 0.2s;
+            text-align: center;
+            padding: 2px 5px;
+            overflow: hidden;
+            word-break: break-word;
+            line-height: 1.1;
+        }
+        .word-card:active {
+            transform: scale(0.95);
+        }
+        .word-card[contenteditable="true"] {
+            cursor: text;
+            border: 2px dashed #999;
+        }
+        .word-card[contenteditable="true"]:focus {
+            outline: none;
+            background-color: #ffffe0;
+            border-color: #333;
+        }
+        .color-red {
+            color: #ff0000;
+        }
+        .color-blue {
+            color: #00a8ff;
+        }
+        .color-green {
+            color: #00b050;
+        }
+        .color-yellow {
+            color: #ffc000;
+        }
+        .color-black {
+            color: #000000;
+        }
+        .color-grey-bg {
+            background-color: #a6a6a6 !important;
+            color: #000 !important;
+        }
+        .color-grey-text {
+            color: #808080 !important;
+        }
+        .progress-controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .progress-controls input {
+            padding: 10px;
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            text-transform: uppercase;
+        }
+        .progress-controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #00b050;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #capture-history {
+            background: transparent;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        #log-area {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 150px;
+            font-size: 20px;
+            line-height: 1.6;
+        }
+        .turn-row {
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .turn-row:hover {
+            background-color: #f9f9f9;
+        }
+        .turn-row.active-turn {
+            background-color: #e6f7ff;
+            border-left: 5px solid #00a8ff;
+        }
+        .turn-clue-container {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+        .turn-clue {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .turn-action-btn {
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #666;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 2px 6px;
+            transition: 0.2s;
+        }
+        .turn-action-btn:hover {
+            background: #eee;
+            color: #000;
+        }
+        .turn-action-btn.del:hover {
+            color: #ff0000;
+            border-color: #ff0000;
+        }
+        .turn-word-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 3px 8px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        .turn-word-ctrl {
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #888;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .turn-word-ctrl:hover {
+            color: #333;
+        }
+        .turn-word-ctrl.del:hover {
+            color: #ff0000;
+        }
+        .available-words-section {
+            background: rgba(249, 249, 249, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .available-words-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .available-word-btn {
+            padding: 8px 15px;
+            background: #fff;
+            border: 1px solid #aaa;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: Arial, sans-serif;
+        }
+        .available-word-btn:hover {
+            background: #e0e0e0;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-family: Arial, sans-serif;
+            max-width: 90vw;
+            text-align: center;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        @media (max-width: 768px) {
+            .game-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+            .tab {
+                flex: 1 1 45%;
+                font-size: 14px;
+                padding: 10px 5px;
+            }
+            .ai-section input {
+                width: 90%;
+                margin-bottom: 10px;
+            }
+            .grid {
+                gap: 4px;
+            }
+            .word-card {
+                height: 40px;
+                padding: 2px;
+                font-size: 12px;
+                line-height: 1.1;
+            }
+            .score-board {
+                font-size: 28px;
+            }
+            .progress-controls input {
+                width: 100% !important;
+                box-sizing: border-box;
+            }
+            .progress-controls button {
+                width: 100%;
+            }
+        }
+
+        #theme-settings-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: 2px solid #ccc;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        #theme-settings-btn:hover {
+            transform: scale(1.05);
+        }
+        #theme-modal {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9998;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            max-height: 60vh;
+            overflow-y: auto;
+            width: 300px;
+        }
+        #theme-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .theme-thumb {
+            height: 80px;
+            border-radius: 5px;
+            cursor: pointer;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: #fff;
+            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000;
+            font-size: 13px;
+            padding-bottom: 5px;
+            font-family: Arial, sans-serif;
+            transition: 0.15s;
+            border: 2px solid transparent;
+        }
+        .theme-thumb:hover {
+            border-color: #008cba;
+            transform: scale(1.02);
+        }
+        .retry-btn {
+            padding: 12px 30px;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .retry-btn:hover {
+            background: #b71c1c;
+        }
     </style>
 </head>
 <body>
 
-<div class="game-container">
+    <div class="game-container">
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('captain-page', this)">Капітанська табличка</div>
-        <div class="tab" onclick="switchTab('player-page', this)">Табличка гравців</div>
-        <div class="tab" onclick="switchTab('progress-page', this)">Хід гри</div>
-    </div>
-
-    <div class="ai-section">
-        <h3>🔑 ШІ-генерація через API-ключ</h3>
-        <input type="password" id="api-key" placeholder="Вставте ваш API-ключ (OpenAI, Groq, DeepSeek...)" style="width:70%;">
-        <input type="text" id="api-url" placeholder="URL API (залиште порожнім для OpenAI)" style="width:50%; margin-top:5px;">
-        <input type="text" id="ai-query" placeholder="Тема (напр. Космос)" style="width:50%; margin-top:5px;">
-        <button onclick="generateGameWithAPI()">🚀 Створити гру через ШІ</button>
-        <p style="font-size:12px; color:#666; margin-top:5px;">Підтримується OpenAI, Groq, Together AI, DeepSeck та будь-який OpenAI-сумісний API.</p>
-        <div class="font-controls" id="font-controls" style="display:none;">
-            <button onclick="changeFontSize(-2)">А-</button>
-            <button onclick="changeFontSize(2)">А+</button>
-            <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-board')">📷 Скріншот</button>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('captain-page', this)">Капітанська табличка</div>
+            <div class="tab" onclick="switchTab('player-page', this)">Табличка гравців</div>
+            <div class="tab" onclick="switchTab('progress-page', this)">Хід гри</div>
         </div>
-    </div>
 
-    <div id="capture-board">
-        <div class="score-board" id="score-board" style="display:none;">
-            <span id="score-red" class="color-red">9</span>:<span id="score-blue" class="color-blue">9</span>
-            <span id="score-grey" class="color-grey-bg" style="padding:0 10px; border-radius:5px;">1</span>:<span id="score-green" class="color-green">1</span>:<span id="score-yellow" class="color-yellow">1</span>
-        </div>
-        <div id="captain-page" class="page active">
-            <div class="grid" id="captain-grid">
-                <div style="grid-column:span 5; text-align:center; padding:20px; color:#777;">Введіть ключ, тему і натисніть «Створити гру».</div>
+        <div class="ai-section">
+            <h3>🤖 Безкоштовний ШІ (3 сервіси з автоматичним перемиканням)</h3>
+            <input type="text" id="ai-query" placeholder="Тема (напр. Космос, Тварини, Міста...)" style="width:70%;">
+            <button onclick="generateGame()">🚀 Створити гру</button>
+            <p style="font-size:12px; color:#666; margin-top:5px;">
+                Спроби: Pollinations → Hugging Face (flan-t5) → Hugging Face (gpt2) → через проксі
+            </p>
+
+            <div class="font-controls" id="font-controls" style="display:none;">
+                <button onclick="changeFontSize(-2)">А-</button>
+                <button onclick="changeFontSize(2)">А+</button>
+                <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-board')">📷 Скріншот</button>
             </div>
         </div>
-        <div id="player-page" class="page">
-            <div class="grid" id="player-grid"></div>
+
+        <div id="capture-board">
+            <div class="score-board" id="score-board" style="display:none;">
+                <span id="score-red" class="color-red">9</span>:<span id="score-blue" class="color-blue">9</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <span id="score-grey" class="color-grey-bg" style="padding:0 10px; border-radius:5px;">1</span>:<span id="score-green" class="color-green">1</span>:<span id="score-yellow" class="color-yellow">1</span>
+            </div>
+
+            <div id="captain-page" class="page active">
+                <div class="grid" id="captain-grid">
+                    <div style="grid-column: span 5; text-align:center; padding: 20px; color:#777;">Введіть тему та натисніть «Створити гру». <br><small>(Щоб змінити колір картки — правий клік)</small></div>
+                </div>
+            </div>
+
+            <div id="player-page" class="page">
+                <div class="grid" id="player-grid"></div>
+            </div>
         </div>
+
+        <div id="progress-page" class="page">
+            <div class="progress-controls">
+                <input type="text" id="clue-input" placeholder="Підказка" style="width:45%;">
+                <input type="number" id="num-input" placeholder="Число" style="width:80px;" min="1" max="9">
+                <button onclick="startNewTurn()">Почати хід</button>
+                <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-history')">📷 Скріншот ходів</button>
+            </div>
+
+            <div id="capture-history">
+                <div id="log-area">
+                    <div style="color: #999; text-align: center; font-style: italic;">Історія ходів...</div>
+                </div>
+            </div>
+
+            <div class="available-words-section">
+                <h4 style="margin-top:0; text-align:center;">Слова на столі (натисніть, щоб відкрити):</h4>
+                <div class="available-words-grid" id="available-words-grid"></div>
+            </div>
+        </div>
+
     </div>
 
-    <div id="progress-page" class="page">
-        <div class="progress-controls">
-            <input type="text" id="clue-input" placeholder="Підказка" style="width:45%;">
-            <input type="number" id="num-input" placeholder="Число" style="width:80px;" min="1" max="9">
-            <button onclick="startNewTurn()">Почати хід</button>
-            <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-history')">📷 Скріншот ходів</button>
-        </div>
-        <div id="capture-history">
-            <div id="log-area"><div style="color:#999; text-align:center; font-style:italic;">Історія ходів...</div></div>
-        </div>
-        <div class="available-words-section">
-            <h4 style="margin-top:0; text-align:center;">Слова на столі</h4>
-            <div class="available-words-grid" id="available-words-grid"></div>
-        </div>
+    <button id="theme-settings-btn">⚙️</button>
+    <div id="theme-modal">
+        <h4 style="margin-top:0; text-align:center;">Виберіть фон</h4>
+        <div id="theme-gallery"></div>
     </div>
-</div>
 
-<button id="theme-settings-btn">⚙️</button>
-<div id="theme-modal"><h4 style="margin-top:0; text-align:center;">Виберіть фон</h4><div id="theme-gallery"></div></div>
-<div id="toast" class="toast"></div>
+    <div id="toast" class="toast"></div>
 
-<script>
-    // ========== СТАН ГРИ ==========
-    let gameState = {
-        words: [], colors: [], revealed: [],
-        scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
-        turns: [], activeTurnIndex: 0, currentFontSize: 16
-    };
+    <script>
+        // ==========================================
+        // СТАН ГРИ
+        // ==========================================
+        let gameState = {
+            words: [],
+            colors: [],
+            revealed: [],
+            scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
+            turns: [],
+            activeTurnIndex: 0,
+            currentFontSize: 16
+        };
 
-    function saveState() { localStorage.setItem('codenamesGameState', JSON.stringify(gameState)); }
-    function loadState() {
-        const saved = localStorage.getItem('codenamesGameState');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed && parsed.words && parsed.words.length === 25) {
-                    gameState = parsed;
-                    if (typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
-                    document.getElementById('score-board').style.display = 'block';
-                    document.getElementById('font-controls').style.display = 'flex';
-                    updateScoreBoard();
-                    renderCaptainBoard();
-                    renderPlayerBoard();
-                    renderProgressPage();
-                }
-            } catch (e) { console.error('Помилка завантаження стану'); }
+        function saveState() {
+            localStorage.setItem('codenamesGameState', JSON.stringify(gameState));
         }
-    }
 
-    let toastTimer = null;
-
-    function showToast(msg, duration = 3500) {
-        const el = document.getElementById('toast');
-        el.textContent = msg;
-        el.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => el.classList.remove('show'), duration);
-    }
-
-    async function copyScreenshotToClipboard(elementId) {
-        const element = document.getElementById(elementId);
-        const originalBg = element.style.background;
-        element.style.background = '#ffffff';
-        try {
-            const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2 });
-            canvas.toBlob(async function(blob) {
+        function loadState() {
+            const saved = localStorage.getItem('codenamesGameState');
+            if (saved) {
                 try {
-                    const item = new ClipboardItem({ 'image/png': blob });
-                    await navigator.clipboard.write([item]);
-                    showToast('✅ Скріншот скопійовано!');
-                } catch (err) {
-                    showToast('❌ Помилка копіювання: ' + err.message, 4000);
-                }
-            });
-        } catch (err) {
-            showToast('❌ Помилка скріншоту', 4000);
-        } finally {
-            element.style.background = originalBg;
-        }
-    }
-
-    function switchTab(pageId, element) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
-        element.classList.add('active');
-    }
-
-    function changeFontSize(step) {
-        gameState.currentFontSize = Math.min(36, Math.max(10, gameState.currentFontSize + step));
-        document.querySelectorAll('.word-card, .turn-word-tag, .available-word-btn, .turn-clue').forEach(el => {
-            el.style.fontSize = gameState.currentFontSize + 'px';
-        });
-        renderProgressPage();
-        saveState();
-    }
-
-    // ========== ШІ через API-ключ ==========
-    async function generateGameWithAPI() {
-        const apiKey = document.getElementById('api-key').value.trim();
-        if (!apiKey) { showToast('⚠️ Вставте ваш API-ключ!', 3000); return; }
-        let baseUrl = document.getElementById('api-url').value.trim();
-        if (!baseUrl) baseUrl = 'https://api.openai.com/v1/chat/completions';
-
-        const query = document.getElementById('ai-query').value.trim() || 'українські іменники';
-        const grid = document.getElementById('captain-grid');
-        grid.innerHTML = `<h3 style="grid-column:span 5; text-align:center;">⏳ ШІ генерує слова за темою «${query}»...</h3>`;
-        document.getElementById('font-controls').style.display = 'none';
-
-        try {
-            const systemPrompt = "Ти — генератор слів для гри. Твоє завдання: видати рівно 25 унікальних українських іменників на задану тему. Відповідай ТІЛЬКИ словами через пробіл, без пояснень, без нумерації.";
-            const userPrompt = `Тема: ${query}. Дай 25 слів.`;
-
-            const response = await fetch(baseUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.8,
-                    max_tokens: 300
-                }),
-                signal: AbortSignal.timeout(30000)
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`API помилка (${response.status}): ${errText}`);
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.words && parsed.words.length === 25) {
+                        gameState = parsed;
+                        if (typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
+                        document.getElementById('score-board').style.display = 'block';
+                        document.getElementById('font-controls').style.display = 'flex';
+                        updateScoreBoard();
+                        renderCaptainBoard();
+                        renderPlayerBoard();
+                        renderProgressPage();
+                    }
+                } catch (e) { console.error('Помилка завантаження стану'); }
             }
+        }
 
-            const data = await response.json();
-            const content = data.choices?.[0]?.message?.content || '';
-            let words = content.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
+        // ==========================================
+        // ТОАСТ
+        // ==========================================
+        let toastTimer = null;
+
+        function showToast(msg, duration = 4000) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+        }
+
+        // ==========================================
+        // СКРІНШОТ
+        // ==========================================
+        async function copyScreenshotToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const originalBg = element.style.background;
+            element.style.background = '#ffffff';
+            try {
+                const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2 });
+                canvas.toBlob(async function(blob) {
+                    try {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        await navigator.clipboard.write([item]);
+                        showToast('✅ Скріншот скопійовано!');
+                    } catch (err) {
+                        showToast('❌ Помилка копіювання: ' + err.message, 4000);
+                    }
+                });
+            } catch (err) {
+                showToast('❌ Помилка скріншоту', 4000);
+            } finally {
+                element.style.background = originalBg;
+            }
+        }
+
+        // ==========================================
+        // ВКЛАДКИ
+        // ==========================================
+        function switchTab(pageId, element) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        function changeFontSize(step) {
+            gameState.currentFontSize = Math.min(36, Math.max(10, gameState.currentFontSize + step));
+            document.querySelectorAll('.word-card, .turn-word-tag, .available-word-btn, .turn-clue').forEach(el => {
+                el.style.fontSize = gameState.currentFontSize + 'px';
+            });
+            renderProgressPage();
+            saveState();
+        }
+
+        // ==========================================
+        // БАГАТОШАРОВИЙ ШІ-ЗАПИТ (без ключів)
+        // ==========================================
+
+        // Допоміжна: запит через fetch з таймаутом
+        async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const res = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return res;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
+
+        // Очищення тексту до слів
+        function extractWords(text) {
+            let raw = text.replace(/[^А-Яа-яЄєІіЇїҐґ'’\s]/gi, ' ')
                 .toUpperCase()
                 .split(/\s+/)
                 .filter(w => w.length > 1);
-            words = [...new Set(words)];
+            return [...new Set(raw)];
+        }
 
-            if (words.length < 25) {
-                throw new Error(`Отримано лише ${words.length} слів, потрібно 25. Спробуйте іншу тему або API.`);
+        // ----- 1. Pollinations (прямий GET) -----
+        async function tryPollinations(query) {
+            const prompt =
+                `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
+            const url =
+                `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
+            const res = await fetchWithTimeout(url, {}, 20000);
+            if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+            const text = await res.text();
+            const words = extractWords(text);
+            if (words.length < 25) throw new Error(`Pollinations повернув лише ${words.length} слів`);
+            return words.slice(0, 25);
+        }
+
+        // ----- 2. Pollinations через CORS-проксі (якщо прямий заблоковано) -----
+        async function tryPollinationsProxy(query) {
+            const prompt =
+                `Generate exactly 25 unique Ukrainian nouns related to "${query}". Return only 25 words separated by spaces, no numbers, no extra text, no explanations.`;
+            const url =
+                `https://text.pollinations.ai/prompt?text=${encodeURIComponent(prompt)}&seed=${Math.floor(Math.random() * 1000000)}&model=openai`;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            const res = await fetchWithTimeout(proxyUrl, {}, 20000);
+            if (!res.ok) throw new Error(`Pollinations via proxy HTTP ${res.status}`);
+            const text = await res.text();
+            const words = extractWords(text);
+            if (words.length < 25) throw new Error(`Pollinations (proxy) повернув лише ${words.length} слів`);
+            return words.slice(0, 25);
+        }
+
+        // ----- 3. Hugging Face (flan-t5-base) без токена, через проксі -----
+        async function tryHuggingFaceFlan(query) {
+            const prompt = `Generate exactly 25 Ukrainian nouns related to "${query}". Return only words separated by spaces.`;
+            const url = 'https://api-inference.huggingface.co/models/google/flan-t5-base';
+            const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inputs: prompt, parameters: { max_length: 300, temperature: 0.8 } })
+            }, 25000);
+            if (!res.ok) throw new Error(`HuggingFace Flan HTTP ${res.status}`);
+            const data = await res.json();
+            let text = data?.generated_text || data?.[0]?.generated_text || '';
+            if (!text) throw new Error('Порожня відповідь від Flan');
+            const words = extractWords(text);
+            if (words.length < 25) throw new Error(`Flan повернув лише ${words.length} слів`);
+            return words.slice(0, 25);
+        }
+
+        // ----- 4. Hugging Face (gpt2) через проксі (якщо flan не спрацював) -----
+        async function tryHuggingFaceGpt2(query) {
+            const prompt = `Generate exactly 25 Ukrainian nouns related to "${query}". Return only words separated by spaces.`;
+            const url = 'https://api-inference.huggingface.co/models/gpt2';
+            const res = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inputs: prompt, parameters: { max_length: 200, temperature: 0.9 } })
+            }, 25000);
+            if (!res.ok) throw new Error(`HuggingFace GPT2 HTTP ${res.status}`);
+            const data = await res.json();
+            let text = data?.generated_text || data?.[0]?.generated_text || '';
+            if (!text) throw new Error('Порожня відповідь від GPT2');
+            const words = extractWords(text);
+            if (words.length < 25) throw new Error(`GPT2 повернув лише ${words.length} слів`);
+            return words.slice(0, 25);
+        }
+
+        // ----- 5. Додатковий резерв: Hugging Face через CORS-проксі (якщо прямі запити блокуються) -----
+        async function tryHuggingFaceProxy(query) {
+            const prompt = `Generate exactly 25 Ukrainian nouns related to "${query}". Return only words separated by spaces.`;
+            const url = 'https://api-inference.huggingface.co/models/google/flan-t5-base';
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+            const res = await fetchWithTimeout(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inputs: prompt, parameters: { max_length: 300, temperature: 0.8 } })
+            }, 25000);
+            if (!res.ok) throw new Error(`HuggingFace via proxy HTTP ${res.status}`);
+            const data = await res.json();
+            let text = data?.generated_text || data?.[0]?.generated_text || '';
+            if (!text) throw new Error('Порожня відповідь від HF proxy');
+            const words = extractWords(text);
+            if (words.length < 25) throw new Error(`HF proxy повернув лише ${words.length} слів`);
+            return words.slice(0, 25);
+        }
+
+        // ----- ГОЛОВНА ФУНКЦІЯ З ПОСЛІДОВНИМИ СПРОБАМИ -----
+        async function fetchAIWords(query) {
+            const attempts = [
+                { name: 'Pollinations (прямий)', fn: tryPollinations },
+                { name: 'Pollinations (проксі)', fn: tryPollinationsProxy },
+                { name: 'HuggingFace Flan-T5', fn: tryHuggingFaceFlan },
+                { name: 'HuggingFace GPT2', fn: tryHuggingFaceGpt2 },
+                { name: 'HuggingFace через проксі', fn: tryHuggingFaceProxy }
+            ];
+
+            let lastError = null;
+            for (const attempt of attempts) {
+                try {
+                    showToast(`⏳ Спроба: ${attempt.name}...`, 5000);
+                    const words = await attempt.fn(query);
+                    if (words && words.length === 25) {
+                        showToast(`✅ Отримано від ${attempt.name}`, 2000);
+                        return words;
+                    }
+                } catch (err) {
+                    console.warn(`❌ ${attempt.name} не вдався:`, err.message);
+                    lastError = err;
+                }
             }
 
-            words = words.slice(0, 25);
+            throw new Error(`Жоден із 5-ти ШІ-сервісів не відповів. Остання помилка: ${lastError?.message || 'невідома'}`);
+        }
 
-            // Розкидаємо кольори
-            let colors = [
-                ...Array(9).fill('red'),
-                ...Array(9).fill('blue'),
-                'green', 'yellow', 'grey-bg',
-                ...Array(4).fill('black')
-            ];
-            colors = colors.sort(() => Math.random() - 0.5);
+        // ==========================================
+        // СТВОРЕННЯ ГРИ (ТІЛЬКИ ШІ, БЕЗ СЛОВНИКА)
+        // ==========================================
+        async function generateGame() {
+            const query = document.getElementById('ai-query').value.trim() || 'Українські іменники';
+            const grid = document.getElementById('captain-grid');
+            grid.innerHTML =
+                `<h3 style="grid-column: span 5; text-align:center;">⏳ ШІ генерує слова за темою «${query}»... (спроби 5 сервісів)</h3>`;
+            document.getElementById('font-controls').style.display = 'none';
 
-            gameState = {
-                words: words,
-                colors: colors,
-                revealed: Array(25).fill(false),
-                scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
-                turns: [],
-                activeTurnIndex: 0,
-                currentFontSize: gameState.currentFontSize || 16
-            };
+            try {
+                let fetchedWords = await fetchAIWords(query);
 
+                // Розкидаємо кольори
+                let colors = [
+                    ...Array(9).fill('red'),
+                    ...Array(9).fill('blue'),
+                    'green',
+                    'yellow',
+                    'grey-bg',
+                    ...Array(4).fill('black')
+                ];
+                colors = colors.sort(() => Math.random() - 0.5);
+
+                gameState = {
+                    words: fetchedWords,
+                    colors: colors,
+                    revealed: Array(25).fill(false),
+                    scores: { red: 9, blue: 9, grey: 1, green: 1, yellow: 1 },
+                    turns: [],
+                    activeTurnIndex: 0,
+                    currentFontSize: gameState.currentFontSize || 16
+                };
+
+                saveState();
+                document.getElementById('score-board').style.display = 'block';
+                document.getElementById('font-controls').style.display = 'flex';
+                updateScoreBoard();
+                renderCaptainBoard();
+                renderPlayerBoard();
+                renderProgressPage();
+                showToast('✅ Гра створена за допомогою ШІ!', 3000);
+
+            } catch (error) {
+                console.error('Всі спроби ШІ провалились:', error);
+                grid.innerHTML = `
+                        <div style="grid-column: span 5; text-align:center; padding:30px; color:#d32f2f;">
+                            <h3>❌ Не вдалося отримати слова від ШІ</h3>
+                            <p style="color:#666; margin:15px 0;">
+                                ${error.message}<br>
+                                Перевірте інтернет, змініть тему або спробуйте пізніше.
+                            </p>
+                            <button class="retry-btn" onclick="generateGame()">🔄 Повторити спробу</button>
+                        </div>`;
+                showToast('❌ Всі ШІ-сервіси недоступні, спробуйте ще раз', 6000);
+            }
+        }
+
+        // ==========================================
+        // РЕНДЕРИНГ (БЕЗ ЗМІН)
+        // ==========================================
+        function updateWordText(index, newText) {
+            let clean = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
+            if (clean.length > 0) gameState.words[index] = clean;
             saveState();
-            document.getElementById('score-board').style.display = 'block';
-            document.getElementById('font-controls').style.display = 'flex';
-            updateScoreBoard();
-            renderCaptainBoard();
             renderPlayerBoard();
             renderProgressPage();
-            showToast('✅ Гра створена за допомогою ШІ!');
-
-        } catch (error) {
-            console.error('Помилка ШІ:', error);
-            grid.innerHTML = `
-                <div style="grid-column:span 5; text-align:center; padding:30px; color:#d32f2f;">
-                    <h3>❌ Не вдалося отримати слова від ШІ</h3>
-                    <p style="color:#666;">Причина: ${error.message}<br>
-                    Перевірте ключ, URL та інтернет.</p>
-                    <button onclick="generateGameWithAPI()" style="padding:10px 30px; background:#333; color:#fff; border:none; border-radius:5px; cursor:pointer;">Повторити</button>
-                </div>`;
-            showToast('❌ Помилка ШІ: ' + error.message, 5000);
         }
-    }
 
-    // ========== РЕНДЕРИНГ (без змін) ==========
-    function updateWordText(index, newText) {
-        let clean = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
-        if (clean.length > 0) gameState.words[index] = clean;
-        saveState();
-        renderPlayerBoard();
-        renderProgressPage();
-    }
+        function cycleCaptainColor(index, event) {
+            event.preventDefault();
+            const order = ['red', 'blue', 'green', 'yellow', 'grey-bg', 'black'];
+            let cur = gameState.colors[index];
+            let next = order[(order.indexOf(cur) + 1) % order.length];
+            gameState.colors[index] = next;
 
-    function cycleCaptainColor(index, event) {
-        event.preventDefault();
-        const order = ['red', 'blue', 'green', 'yellow', 'grey-bg', 'black'];
-        let cur = gameState.colors[index];
-        let next = order[(order.indexOf(cur) + 1) % order.length];
-        gameState.colors[index] = next;
-
-        gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, yellow: 0 };
-        for (let i = 0; i < 25; i++) {
-            if (!gameState.revealed[i]) {
-                let c = gameState.colors[i];
-                if (c === 'red') gameState.scores.red++;
-                else if (c === 'blue') gameState.scores.blue++;
-                else if (c === 'green') gameState.scores.green++;
-                else if (c === 'yellow') gameState.scores.yellow++;
-                else if (c === 'grey-bg') gameState.scores.grey++;
+            gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, yellow: 0 };
+            for (let i = 0; i < 25; i++) {
+                if (!gameState.revealed[i]) {
+                    let c = gameState.colors[i];
+                    if (c === 'red') gameState.scores.red++;
+                    else if (c === 'blue') gameState.scores.blue++;
+                    else if (c === 'green') gameState.scores.green++;
+                    else if (c === 'yellow') gameState.scores.yellow++;
+                    else if (c === 'grey-bg') gameState.scores.grey++;
+                }
             }
+            saveState();
+            renderCaptainBoard();
+            renderPlayerBoard();
+            updateScoreBoard();
         }
-        saveState();
-        renderCaptainBoard();
-        renderPlayerBoard();
-        updateScoreBoard();
-    }
 
-    function renderCaptainBoard() {
-        const grid = document.getElementById('captain-grid');
-        grid.innerHTML = '';
-        gameState.words.forEach((word, index) => {
-            let card = document.createElement('div');
-            let colorClass = gameState.colors[index] === 'grey-bg' ? 'color-grey-bg' : `color-${gameState.colors[index]}`;
-            card.className = `word-card ${colorClass}`;
-            card.style.fontSize = gameState.currentFontSize + 'px';
-            card.innerText = word;
-            card.contentEditable = 'true';
-            card.title = 'Правий клік — зміна кольору';
-            card.oncontextmenu = (e) => cycleCaptainColor(index, e);
-            card.onblur = () => { updateWordText(index, card.innerText);
-                card.innerText = gameState.words[index]; };
-            card.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault();
-                    card.blur(); } };
-            grid.appendChild(card);
-        });
-    }
+        function renderCaptainBoard() {
+            const grid = document.getElementById('captain-grid');
+            grid.innerHTML = '';
+            gameState.words.forEach((word, index) => {
+                let card = document.createElement('div');
+                let colorClass = gameState.colors[index] === 'grey-bg' ? 'color-grey-bg' : `color-${gameState.colors[index]}`;
+                card.className = `word-card ${colorClass}`;
+                card.style.fontSize = gameState.currentFontSize + 'px';
+                card.innerText = word;
+                card.contentEditable = 'true';
+                card.title = 'Правий клік — зміна кольору';
+                card.oncontextmenu = (e) => cycleCaptainColor(index, e);
+                card.onblur = () => { updateWordText(index, card.innerText);
+                    card.innerText = gameState.words[index]; };
+                card.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault();
+                        card.blur(); } };
+                grid.appendChild(card);
+            });
+        }
 
-    function renderPlayerBoard() {
-        const grid = document.getElementById('player-grid');
-        grid.innerHTML = '';
-        gameState.words.forEach((word, index) => {
-            let card = document.createElement('div');
-            card.style.fontSize = gameState.currentFontSize + 'px';
-            card.innerText = word;
-            if (gameState.revealed[index]) {
-                let c = gameState.colors[index];
-                card.className = 'word-card';
-                if (c === 'black') card.classList.add('color-grey-text');
-                else if (c === 'grey-bg') card.classList.add('color-grey-bg');
-                else card.classList.add(`color-${c}`);
-            } else {
-                card.className = 'word-card color-black';
-                card.onclick = () => handleWordReveal(index);
+        function renderPlayerBoard() {
+            const grid = document.getElementById('player-grid');
+            grid.innerHTML = '';
+            gameState.words.forEach((word, index) => {
+                let card = document.createElement('div');
+                card.style.fontSize = gameState.currentFontSize + 'px';
+                card.innerText = word;
+                if (gameState.revealed[index]) {
+                    let c = gameState.colors[index];
+                    card.className = 'word-card';
+                    if (c === 'black') card.classList.add('color-grey-text');
+                    else if (c === 'grey-bg') card.classList.add('color-grey-bg');
+                    else card.classList.add(`color-${c}`);
+                } else {
+                    card.className = 'word-card color-black';
+                    card.onclick = () => handleWordReveal(index);
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-red').innerText = gameState.scores.red;
+            document.getElementById('score-blue').innerText = gameState.scores.blue;
+            document.getElementById('score-grey').innerText = gameState.scores.grey;
+            document.getElementById('score-green').innerText = gameState.scores.green;
+            document.getElementById('score-yellow').innerText = gameState.scores.yellow;
+        }
+
+        // ==========================================
+        // ХІД ГРИ
+        // ==========================================
+        function startNewTurn() {
+            let clue = document.getElementById('clue-input').value.trim().toUpperCase();
+            let num = document.getElementById('num-input').value.trim();
+            if (!clue) { showToast('⚠️ Введіть підказку!', 2000); return; }
+            let teamColor = gameState.turns.length % 2 === 0 ? 'red' : 'blue';
+            gameState.turns.push({ clue, number: num, words: [], team: teamColor });
+            gameState.activeTurnIndex = gameState.turns.length - 1;
+            document.getElementById('clue-input').value = '';
+            document.getElementById('num-input').value = '';
+            saveState();
+            renderProgressPage();
+            showToast(`🎯 Хід ${gameState.turns.length} — ${teamColor === 'red' ? 'Червоні' : 'Сині'}`);
+        }
+
+        function handleWordReveal(index) {
+            if (gameState.revealed[index]) return;
+            if (gameState.turns.length === 0) {
+                showToast('⚠️ Спочатку почніть хід!', 2500);
+                return;
             }
-            grid.appendChild(card);
-        });
-    }
+            gameState.revealed[index] = true;
+            let color = gameState.colors[index];
+            if (color === 'grey-bg') gameState.scores.grey--;
+            else if (color !== 'black') gameState.scores[color]--;
 
-    function updateScoreBoard() {
-        document.getElementById('score-red').innerText = gameState.scores.red;
-        document.getElementById('score-blue').innerText = gameState.scores.blue;
-        document.getElementById('score-grey').innerText = gameState.scores.grey;
-        document.getElementById('score-green').innerText = gameState.scores.green;
-        document.getElementById('score-yellow').innerText = gameState.scores.yellow;
-    }
-
-    // ========== ХІД ГРИ ==========
-    function startNewTurn() {
-        let clue = document.getElementById('clue-input').value.trim().toUpperCase();
-        let num = document.getElementById('num-input').value.trim();
-        if (!clue) { showToast('⚠️ Введіть підказку!', 2000); return; }
-        let teamColor = gameState.turns.length % 2 === 0 ? 'red' : 'blue';
-        gameState.turns.push({ clue, number: num, words: [], team: teamColor });
-        gameState.activeTurnIndex = gameState.turns.length - 1;
-        document.getElementById('clue-input').value = '';
-        document.getElementById('num-input').value = '';
-        saveState();
-        renderProgressPage();
-        showToast(`🎯 Хід ${gameState.turns.length} — ${teamColor === 'red' ? 'Червоні' : 'Сині'}`);
-    }
-
-    function handleWordReveal(index) {
-        if (gameState.revealed[index]) return;
-        if (gameState.turns.length === 0) {
-            showToast('⚠️ Спочатку почніть хід!', 2500);
-            return;
+            let turn = gameState.turns[gameState.activeTurnIndex];
+            if (turn) {
+                turn.words.push({ text: gameState.words[index], color });
+            }
+            saveState();
+            updateScoreBoard();
+            renderPlayerBoard();
+            renderProgressPage();
         }
-        gameState.revealed[index] = true;
-        let color = gameState.colors[index];
-        if (color === 'grey-bg') gameState.scores.grey--;
-        else if (color !== 'black') gameState.scores[color]--;
 
-        let turn = gameState.turns[gameState.activeTurnIndex];
-        if (turn) {
-            turn.words.push({ text: gameState.words[index], color });
+        function deleteTurn(turnIdx) {
+            if (!confirm('Видалити цей хід?')) return;
+            let turn = gameState.turns[turnIdx];
+            turn.words.forEach(w => {
+                let idx = gameState.words.indexOf(w.text);
+                if (idx !== -1) {
+                    gameState.revealed[idx] = false;
+                    let c = gameState.colors[idx];
+                    if (c === 'grey-bg') gameState.scores.grey++;
+                    else if (c !== 'black') gameState.scores[c]++;
+                }
+            });
+            gameState.turns.splice(turnIdx, 1);
+            if (gameState.activeTurnIndex >= gameState.turns.length) {
+                gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
+            }
+            saveState();
+            updateScoreBoard();
+            renderPlayerBoard();
+            renderProgressPage();
+            showToast('🗑️ Хід видалено');
         }
-        saveState();
-        updateScoreBoard();
-        renderPlayerBoard();
-        renderProgressPage();
-    }
 
-    function deleteTurn(turnIdx) {
-        if (!confirm('Видалити цей хід?')) return;
-        let turn = gameState.turns[turnIdx];
-        turn.words.forEach(w => {
-            let idx = gameState.words.indexOf(w.text);
+        function editTurnInfo(turnIdx) {
+            let turn = gameState.turns[turnIdx];
+            let newClue = prompt('Нова підказка:', turn.clue);
+            if (newClue !== null && newClue.trim() !== '') turn.clue = newClue.trim().toUpperCase();
+            let newNum = prompt('Нове число:', turn.number);
+            if (newNum !== null) turn.number = newNum.trim();
+            saveState();
+            renderProgressPage();
+        }
+
+        function removeWordFromTurn(turnIdx, wordIdx) {
+            let wordObj = gameState.turns[turnIdx].words[wordIdx];
+            let idx = gameState.words.indexOf(wordObj.text);
             if (idx !== -1) {
                 gameState.revealed[idx] = false;
                 let c = gameState.colors[idx];
                 if (c === 'grey-bg') gameState.scores.grey++;
                 else if (c !== 'black') gameState.scores[c]++;
             }
-        });
-        gameState.turns.splice(turnIdx, 1);
-        if (gameState.activeTurnIndex >= gameState.turns.length) {
-            gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
+            gameState.turns[turnIdx].words.splice(wordIdx, 1);
+            saveState();
+            updateScoreBoard();
+            renderPlayerBoard();
+            renderProgressPage();
         }
-        saveState();
-        updateScoreBoard();
-        renderPlayerBoard();
-        renderProgressPage();
-        showToast('🗑️ Хід видалено');
-    }
 
-    function editTurnInfo(turnIdx) {
-        let turn = gameState.turns[turnIdx];
-        let newClue = prompt('Нова підказка:', turn.clue);
-        if (newClue !== null && newClue.trim() !== '') turn.clue = newClue.trim().toUpperCase();
-        let newNum = prompt('Нове число:', turn.number);
-        if (newNum !== null) turn.number = newNum.trim();
-        saveState();
-        renderProgressPage();
-    }
-
-    function removeWordFromTurn(turnIdx, wordIdx) {
-        let wordObj = gameState.turns[turnIdx].words[wordIdx];
-        let idx = gameState.words.indexOf(wordObj.text);
-        if (idx !== -1) {
-            gameState.revealed[idx] = false;
-            let c = gameState.colors[idx];
-            if (c === 'grey-bg') gameState.scores.grey++;
-            else if (c !== 'black') gameState.scores[c]++;
+        function moveWordInTurn(turnIdx, wordIdx, dir) {
+            let arr = gameState.turns[turnIdx].words;
+            let newIdx = wordIdx + dir;
+            if (newIdx < 0 || newIdx >= arr.length) return;
+            [arr[wordIdx], arr[newIdx]] = [arr[newIdx], arr[wordIdx]];
+            saveState();
+            renderProgressPage();
         }
-        gameState.turns[turnIdx].words.splice(wordIdx, 1);
-        saveState();
-        updateScoreBoard();
-        renderPlayerBoard();
-        renderProgressPage();
-    }
 
-    function moveWordInTurn(turnIdx, wordIdx, dir) {
-        let arr = gameState.turns[turnIdx].words;
-        let newIdx = wordIdx + dir;
-        if (newIdx < 0 || newIdx >= arr.length) return;
-        [arr[wordIdx], arr[newIdx]] = [arr[newIdx], arr[wordIdx]];
-        saveState();
-        renderProgressPage();
-    }
+        function renderProgressPage() {
+            const logArea = document.getElementById('log-area');
+            const wordsGrid = document.getElementById('available-words-grid');
 
-    function renderProgressPage() {
-        const logArea = document.getElementById('log-area');
-        const wordsGrid = document.getElementById('available-words-grid');
+            logArea.innerHTML = '';
+            if (gameState.turns.length === 0) {
+                logArea.innerHTML =
+                    `<div style="color:#999;text-align:center;font-style:italic;font-size:${gameState.currentFontSize}px;">Тут відображатиметься історія ходів...</div>`;
+            } else {
+                gameState.turns.forEach((turn, turnIdx) => {
+                    let row = document.createElement('div');
+                    row.className = 'turn-row';
+                    if (gameState.activeTurnIndex === turnIdx) row.classList.add('active-turn');
+                    row.onclick = () => { gameState.activeTurnIndex = turnIdx;
+                        saveState();
+                        renderProgressPage(); };
+                    row.style.cursor = 'pointer';
 
-        logArea.innerHTML = '';
-        if (gameState.turns.length === 0) {
-            logArea.innerHTML =
-                `<div style="color:#999;text-align:center;font-style:italic;font-size:${gameState.currentFontSize}px;">Тут відображатиметься історія ходів...</div>`;
-        } else {
-            gameState.turns.forEach((turn, turnIdx) => {
-                let row = document.createElement('div');
-                row.className = 'turn-row';
-                if (gameState.activeTurnIndex === turnIdx) row.classList.add('active-turn');
-                row.onclick = () => { gameState.activeTurnIndex = turnIdx;
-                    saveState();
-                    renderProgressPage(); };
-                row.style.cursor = 'pointer';
+                    let teamColorStyle = turn.team === 'red' ? 'color:#ff0000;' : 'color:#00a8ff;';
+                    let numText = turn.number ? ` ${turn.number}` : '';
 
-                let teamColorStyle = turn.team === 'red' ? 'color:#ff0000;' : 'color:#00a8ff;';
-                let numText = turn.number ? ` ${turn.number}` : '';
+                    let wordsHtml = turn.words.map((w, wIdx) => {
+                        let style = '';
+                        if (w.color === 'red') style = 'color:#ff0000;';
+                        else if (w.color === 'blue') style = 'color:#00a8ff;';
+                        else if (w.color === 'green') style = 'color:#00b050;';
+                        else if (w.color === 'yellow') style = 'color:#ffc000;text-shadow:1px 1px 0 #ccc;';
+                        else if (w.color === 'grey-bg') style = 'background:#a6a6a6;color:#000;';
+                        else if (w.color === 'black') style = 'color:#808080;';
 
-                let wordsHtml = turn.words.map((w, wIdx) => {
-                    let style = '';
-                    if (w.color === 'red') style = 'color:#ff0000;';
-                    else if (w.color === 'blue') style = 'color:#00a8ff;';
-                    else if (w.color === 'green') style = 'color:#00b050;';
-                    else if (w.color === 'yellow') style = 'color:#ffc000;text-shadow:1px 1px 0 #ccc;';
-                    else if (w.color === 'grey-bg') style = 'background:#a6a6a6;color:#000;';
-                    else if (w.color === 'black') style = 'color:#808080;';
+                        let leftBtn = wIdx > 0 ?
+                            `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},-1)">◀</span>` :
+                            '';
+                        let rightBtn = wIdx < turn.words.length - 1 ?
+                            `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},1)">▶</span>` :
+                            '';
 
-                    let leftBtn = wIdx > 0 ?
-                        `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},-1)">◀</span>` :
-                        '';
-                    let rightBtn = wIdx < turn.words.length - 1 ?
-                        `<span class="turn-word-ctrl" onclick="event.stopPropagation(); moveWordInTurn(${turnIdx},${wIdx},1)">▶</span>` :
-                        '';
-
-                    return `<div class="turn-word-tag" style="font-size:${gameState.currentFontSize}px;">
+                        return `<div class="turn-word-tag" style="font-size:${gameState.currentFontSize}px;">
                                     <span style="font-weight:bold;${style}">${w.text}</span>
                                     ${leftBtn}${rightBtn}
                                     <span class="turn-word-ctrl del" onclick="event.stopPropagation(); removeWordFromTurn(${turnIdx},${wIdx})">✖</span>
                                 </div>`;
-                }).join('');
+                    }).join('');
 
-                let activeLabel = (gameState.activeTurnIndex === turnIdx) ?
-                    '<span style="font-size:12px;color:#666;margin-left:auto;">(Активно)</span>' : '';
+                    let activeLabel = (gameState.activeTurnIndex === turnIdx) ?
+                        '<span style="font-size:12px;color:#666;margin-left:auto;">(Активно)</span>' : '';
 
-                row.innerHTML = `
+                    row.innerHTML = `
                             <div class="turn-clue-container">
                                 <span class="turn-clue" style="${teamColorStyle} font-size:${gameState.currentFontSize}px;">${turn.clue}${numText}:</span>
                                 <button class="turn-action-btn" title="Редагувати підказку" onclick="event.stopPropagation(); editTurnInfo(${turnIdx})">✎</button>
@@ -528,87 +1041,93 @@
                             <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">${wordsHtml}</div>
                             ${activeLabel}
                         `;
-                logArea.appendChild(row);
-            });
-            logArea.scrollTop = logArea.scrollHeight;
-        }
-
-        wordsGrid.innerHTML = '';
-        gameState.words.forEach((word, index) => {
-            if (!gameState.revealed[index]) {
-                let btn = document.createElement('button');
-                btn.className = 'available-word-btn';
-                btn.style.fontSize = gameState.currentFontSize + 'px';
-                btn.innerText = word;
-                btn.onclick = () => handleWordReveal(index);
-                wordsGrid.appendChild(btn);
-            }
-        });
-    }
-
-    // ========== ТЕМИ (ФОНИ) ==========
-    const bgBaseUrl = 'https://olgazheltvai2.github.io/images/backgrounds/';
-    const defaultBgUrl = bgBaseUrl + 'background_1.webp';
-
-    document.getElementById('theme-settings-btn').addEventListener('click', () => {
-        const modal = document.getElementById('theme-modal');
-        modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
-    });
-
-    async function checkAndLoadBackgrounds() {
-        const gallery = document.getElementById('theme-gallery');
-        let i = 1,
-            fails = 0;
-        while (fails < 3 && i <= 1000) {
-            let url = bgBaseUrl + `background_${i}.webp`;
-            try {
-                let exists = await new Promise((resolve) => {
-                    let img = new Image();
-                    img.onload = () => resolve(true);
-                    img.onerror = () => resolve(false);
-                    img.src = url;
+                    logArea.appendChild(row);
                 });
-                if (exists) {
-                    fails = 0;
-                    let thumb = document.createElement('div');
-                    thumb.className = 'theme-thumb';
-                    thumb.style.backgroundImage = `url('${url}')`;
-                    thumb.innerText = `Фон ${i}`;
-                    thumb.onclick = () => {
-                        document.body.style.backgroundImage = `url('${url}')`;
-                        document.body.style.backgroundSize = 'cover';
-                        document.body.style.backgroundAttachment = 'fixed';
-                        document.body.style.backgroundPosition = 'center';
-                        localStorage.setItem('mySavedGameBg', url);
-                        document.getElementById('theme-modal').style.display = 'none';
-                        showToast('🖼️ Фон змінено');
-                    };
-                    gallery.appendChild(thumb);
-                } else {
-                    fails++;
+                logArea.scrollTop = logArea.scrollHeight;
+            }
+
+            wordsGrid.innerHTML = '';
+            gameState.words.forEach((word, index) => {
+                if (!gameState.revealed[index]) {
+                    let btn = document.createElement('button');
+                    btn.className = 'available-word-btn';
+                    btn.style.fontSize = gameState.currentFontSize + 'px';
+                    btn.innerText = word;
+                    btn.onclick = () => handleWordReveal(index);
+                    wordsGrid.appendChild(btn);
                 }
-            } catch (e) { fails++; }
-            i++;
+            });
         }
-    }
 
-    function initThemeManager() {
-        let saved = localStorage.getItem('mySavedGameBg');
-        if (saved) {
-            document.body.style.backgroundImage = `url('${saved}')`;
-        } else {
-            document.body.style.backgroundImage = `url('${defaultBgUrl}')`;
+        // ==========================================
+        // ТЕМИ (ФОНИ)
+        // ==========================================
+        const bgBaseUrl = 'https://olgazheltvai2.github.io/images/backgrounds/';
+        const defaultBgUrl = bgBaseUrl + 'background_1.webp';
+
+        document.getElementById('theme-settings-btn').addEventListener('click', () => {
+            const modal = document.getElementById('theme-modal');
+            modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+        });
+
+        async function checkAndLoadBackgrounds() {
+            const gallery = document.getElementById('theme-gallery');
+            let i = 1,
+                fails = 0;
+            while (fails < 3 && i <= 1000) {
+                let url = bgBaseUrl + `background_${i}.webp`;
+                try {
+                    let exists = await new Promise((resolve) => {
+                        let img = new Image();
+                        img.onload = () => resolve(true);
+                        img.onerror = () => resolve(false);
+                        img.src = url;
+                    });
+                    if (exists) {
+                        fails = 0;
+                        let thumb = document.createElement('div');
+                        thumb.className = 'theme-thumb';
+                        thumb.style.backgroundImage = `url('${url}')`;
+                        thumb.innerText = `Фон ${i}`;
+                        thumb.onclick = () => {
+                            document.body.style.backgroundImage = `url('${url}')`;
+                            document.body.style.backgroundSize = 'cover';
+                            document.body.style.backgroundAttachment = 'fixed';
+                            document.body.style.backgroundPosition = 'center';
+                            localStorage.setItem('mySavedGameBg', url);
+                            document.getElementById('theme-modal').style.display = 'none';
+                            showToast('🖼️ Фон змінено');
+                        };
+                        gallery.appendChild(thumb);
+                    } else {
+                        fails++;
+                    }
+                } catch (e) { fails++; }
+                i++;
+            }
         }
-        document.body.style.backgroundSize = 'cover';
-        document.body.style.backgroundAttachment = 'fixed';
-        document.body.style.backgroundPosition = 'center';
-        checkAndLoadBackgrounds();
-    }
 
-    window.onload = () => {
-        loadState();
-        initThemeManager();
-    };
-</script>
+        function initThemeManager() {
+            let saved = localStorage.getItem('mySavedGameBg');
+            if (saved) {
+                document.body.style.backgroundImage = `url('${saved}')`;
+            } else {
+                document.body.style.backgroundImage = `url('${defaultBgUrl}')`;
+            }
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.backgroundPosition = 'center';
+            checkAndLoadBackgrounds();
+        }
+
+        // ==========================================
+        // СТАРТ
+        // ==========================================
+        window.onload = () => {
+            loadState();
+            initThemeManager();
+        };
+    </script>
+
 </body>
 </html>
