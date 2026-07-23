@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кодові Імена — Великий словник (1200+ базових + довантаження)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
-    </script>
+    <title>Кодові Імена — Великий словник (Realtime Firebase)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <style>
-        /* ====== СТИЛІ (скорочені, але повні) ====== */
+        /* ====== СТИЛІ ====== */
         * {
             box-sizing: border-box;
         }
@@ -61,6 +65,23 @@
             border-radius: 8px;
             text-align: center;
         }
+        .room-bar {
+            background: #e1f5fe;
+            border: 1px solid #81d4fa;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .room-info {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0277bd;
+        }
         .ai-section input,
         .ai-section textarea {
             padding: 10px;
@@ -75,7 +96,7 @@
             height: 80px;
             resize: vertical;
         }
-        .ai-section button {
+        .ai-section button, .room-bar button {
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
@@ -91,6 +112,9 @@
         }
         .btn-random {
             background: #6c5ce7 !important;
+        }
+        .btn-room {
+            background: #0288d1 !important;
         }
         .font-controls {
             margin-top: 15px;
@@ -329,20 +353,6 @@
         .toast.show {
             opacity: 1;
         }
-        .retry-btn {
-            padding: 12px 30px;
-            background: #d32f2f;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 18px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 15px;
-        }
-        .retry-btn:hover {
-            background: #b71c1c;
-        }
         .btn-group {
             display: flex;
             flex-wrap: wrap;
@@ -421,11 +431,20 @@
 </head>
 <body>
     <div class="game-container">
+        <div class="room-bar">
+            <div class="room-info">🔴 Кімната: <span id="currentRoomDisplay">Завантаження...</span></div>
+            <div>
+                <button class="btn-room" onclick="copyRoomLink()">📋 Скопіювати лінк кімнати</button>
+                <button class="btn-room" style="background:#555 !important;" onclick="switchRoomPrompt()">🚪 Змінити кімнату</button>
+            </div>
+        </div>
+
         <div class="tabs">
             <div class="tab active" onclick="switchTab('captain-page', this)">Капітанська табличка</div>
             <div class="tab" onclick="switchTab('player-page', this)">Табличка гравців</div>
             <div class="tab" onclick="switchTab('progress-page', this)">Хід гри</div>
         </div>
+
         <div class="ai-section">
             <h3>📚 Вбудований словник <span class="word-count-badge" id="wordCountDisplay">1200+</span></h3>
             <p style="font-size:12px; color:#666;">Автоматично довантажується ще ~4000 слів з публічного джерела (без вашої участі).</p>
@@ -441,21 +460,22 @@
                 <button onclick="changeFontSize(-2)">А-</button>
                 <button onclick="changeFontSize(2)">А+</button>
                 <button class="screenshot-btn" onclick="copyScreenshotToClipboard('capture-board')">📷 Скріншот</button>
-                <button onclick="copySyncUrl()" style="background:#ff9f43; color:white; border:none; font-weight:bold; border-radius:5px; padding:10px 20px; cursor:pointer;">🔗 Поділитися лінком (Синхронізація)</button>
             </div>
         </div>
+
         <div id="capture-board">
             <div class="score-board" id="score-board" style="display:none;">
                 <span id="score-red" class="color-red">9</span>:<span id="score-blue" class="color-blue">9</span>
                 <span id="score-grey" class="color-grey-bg" style="padding:0 10px; border-radius:5px;">1</span>:<span id="score-green" class="color-green">1</span>:<span id="score-yellow" class="color-yellow">1</span>
             </div>
             <div id="captain-page" class="page active">
-                <div class="grid" id="captain-grid"><div style="grid-column:span 5; text-align:center; padding:20px; color:#777;">Виберіть спосіб створення гри.</div></div>
+                <div class="grid" id="captain-grid"><div style="grid-column:span 5; text-align:center; padding:20px; color:#777;">Виберіть спосіб створення гри або очікуйте ходу в кімнаті.</div></div>
             </div>
             <div id="player-page" class="page">
                 <div class="grid" id="player-grid"></div>
             </div>
         </div>
+
         <div id="progress-page" class="page">
             <div class="progress-controls">
                 <input type="text" id="clue-input" placeholder="Підказка" style="width:45%;">
@@ -472,14 +492,39 @@
             </div>
         </div>
     </div>
+
     <button id="theme-settings-btn">⚙️</button>
     <div id="theme-modal"><h4 style="margin-top:0; text-align:center;">Виберіть фон</h4><div id="theme-gallery"></div></div>
     <div id="toast" class="toast"></div>
 
     <script>
         // ============================================================
-        //  ВБУДОВАНИЙ БАЗОВИЙ СПИСОК РЕАЛЬНИХ УКРАЇНСЬКИХ ІМЕННИКІВ (1200+)
-        //  Джерело: частота вживання, перевірені словники.
+        // FIREBASE КОНФІГУРАЦІЯ
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-IAhSkjjKJv8lir_BPi7BXFcgZMZUSUU",
+            authDomain: "code-names-76e15.firebaseapp.com",
+            databaseURL: "https://code-names-76e15-default-rtdb.firebaseio.com",
+            projectId: "code-names-76e15",
+            storageBucket: "code-names-76e15.firebasestorage.app",
+            messagingSenderId: "674434264751",
+            appId: "1:674434264751:web:fa409c63e2c2b8f82e6e5a"
+        };
+
+        // Ініціалізація Firebase
+        let db = null;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch (e) {
+            console.error("Firebase initialization failed. Please check firebaseConfig.", e);
+        }
+
+        let currentRoomId = "default-room";
+        let roomRef = null;
+
+        // ============================================================
+        // ВБУДОВАНИЙ БАЗОВИЙ СПИСОК РЕАЛЬНИХ УКРАЇНСЬКИХ ІМЕННИКІВ
         // ============================================================
         const BASE_NOUNS = [
             "АВТОБУС", "АВТОМОБІЛЬ", "АДРЕСА", "АКВАРІУМ", "АКТОР", "АКЦІЯ", "АЛЕЯ", "АМЕБА", "АМПУЛА",
@@ -572,7 +617,7 @@
             "НАДІЯ", "НАДМІРНІСТЬ", "НАДРУК", "НАДУМНІСТЬ", "НАЗВА", "НАЗДОГАН", "НАЗИВАННЯ", "НАКАЗ", "НАКЛАД",
             "НАКОНЕЧНИК", "НАКРИВКА", "НАЛІПКА", "НАМАГАННЯ", "НАМІР", "НАМОВА", "НАМУР", "НАНЕСЕННЯ", "НАПІВ",
             "НАПІЙ", "НАПІЛ", "НАПЛАВ", "НАПЛИВ", "НАПОВНЕННЯ", "НАПОЛЕГЛИВІСТЬ", "НАПРУГА", "НАПРЯМ", "НАРОД",
-            "НАРОДЖЕННЯ", "НАРУГА", "НАРУКА", "НАРЯД", "НАСАД", "НАСИП", "НАСЛАДА", "НАСЛІДОК", "НАСЛІДУВАННЯ",
+            "НАРОДЖЕННЯ", "НАРУГА", "НАРУКА", "НАРЯД", "НАСАД", "НАСИП", "НАСЛАДА", "НАСЛІДОК", "НАСЛІDUВАHHЯ",
             "НАСМІХ", "НАСТАНОВА", "НАСТІННИЙ", "НАСТРОЙ", "НАСТУП", "НАСУЩНЕ", "НАТА", "НАТОВП", "НАТУРА",
             "НАУКА", "НАФТА", "НАХІД", "НАЧАЛО", "НАШАРУВАННЯ", "НАШЕСТЯ", "НЕБА", "НЕБЕЗПЕКА", "НЕБО",
             "НЕБРА", "НЕВГАМОВНІСТЬ", "НЕВДОВОЛЕННЯ", "НЕВЕРНЕННЯ", "НЕВИДИМІСТЬ", "НЕВИННІСТЬ", "НЕВІДОМІСТЬ", "НЕВІРА", "НЕВОЛЯ",
@@ -601,15 +646,8 @@
             "ОКОНТУР", "ОКОП", "ОКОРОК", "ОКРАСА", "ОКРЕМІСТЬ", "ОКРИЛЕННЯ", "ОКРОП", "ОКРУГ", "ОКСАМИТ"
         ];
 
-        // ============================================================
-        //  ЗМІШАНИЙ СПИСОК (база + довантажені)
-        // ============================================================
         let activeWordList = [...BASE_NOUNS];
 
-        // ============================================================
-        //  ФУНКЦІЯ ДЛЯ АВТОМАТИЧНОГО ЗАВАНТАЖЕННЯ ДОДАТКОВОГО СПИСКУ
-        //  з публічного джерела (без участі користувача)
-        // ============================================================
         async function loadExtraWords() {
             try {
                 const response = await fetch('https://gist.githubusercontent.com/yourusername/yourgistid/raw/words.json');
@@ -627,7 +665,7 @@
         }
 
         // ==========================================
-        // СТАН ГРИ
+        // СТАН ГРИ ДЛЯ REALTIME SYNCRONIZATION
         // ==========================================
         let gameState = {
             words: [],
@@ -639,11 +677,18 @@
             currentFontSize: 16
         };
 
-        function saveState() { localStorage.setItem('codenamesGameState', JSON.stringify(gameState)); }
+        // Запис стану гри у Firebase Realtime Database
+        function saveState() {
+            localStorage.setItem('codenamesGameState', JSON.stringify(gameState));
+            if (db && roomRef) {
+                roomRef.set(gameState);
+            }
+        }
 
-        function initUIFromState() {
+        function renderAllUI() {
             if (gameState.words && gameState.words.length === 25) {
                 if (typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
+                if (!gameState.turns) gameState.turns = [];
                 document.getElementById('score-board').style.display = 'block';
                 document.getElementById('font-controls').style.display = 'flex';
                 updateScoreBoard();
@@ -653,74 +698,51 @@
             }
         }
 
-        function loadState() {
-            const saved = localStorage.getItem('codenamesGameState');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.words && parsed.words.length === 25) {
-                        gameState = parsed;
-                        initUIFromState();
-                    }
-                } catch (e) { console.error('Помилка завантаження стану'); }
-            }
-        }
-
-        // ==========================================
-        // СИНХРОНІЗАЦІЯ ЧЕРЕЗ URL (BASE64)
-        // ==========================================
-        function getSyncUrl() {
-            const stateStr = JSON.stringify(gameState);
-            // Використовуємо Base64 з підтримкою кирилиці
-            const b64 = btoa(unescape(encodeURIComponent(stateStr)));
+        // Подключення до кімнати у Firebase
+        function initRoom(roomId) {
+            currentRoomId = roomId;
+            document.getElementById('currentRoomDisplay').textContent = currentRoomId;
+            
             const url = new URL(window.location.href);
-            url.searchParams.set('state', b64);
-            return url.href;
+            url.searchParams.set('room', currentRoomId);
+            window.history.replaceState({}, '', url.href);
+
+            if (roomRef) {
+                roomRef.off(); // Відписуємось від попередньої кімнати
+            }
+
+            if (db) {
+                roomRef = db.ref('codenames_games/' + currentRoomId);
+                // Слухаємо зміни у реальному часі від будь-якого пристрою
+                roomRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && data.words && data.words.length === 25) {
+                        gameState = data;
+                        localStorage.setItem('codenamesGameState', JSON.stringify(gameState));
+                        renderAllUI();
+                    }
+                });
+            }
         }
 
-        function copySyncUrl() {
-            if (!gameState.words || gameState.words.length !== 25) {
-                showToast('⚠️ Спочатку створіть гру!', 3000);
-                return;
-            }
-            const url = getSyncUrl();
+        function copyRoomLink() {
+            const url = window.location.href;
             navigator.clipboard.writeText(url).then(() => {
-                showToast('✅ Посилання скопійовано! Відкрийте його на іншому пристрої.', 5000);
+                showToast('📋 Посилання на кімнату скопійовано! Надішліть іншим гравцям.', 4000);
             }).catch(err => {
-                showToast('❌ Помилка копіювання: ' + err.message, 4000);
+                showToast('❌ Помилка скопіювання: ' + err.message);
             });
         }
 
-        function loadStateFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            const b64 = params.get('state');
-            if (!b64) return false;
-
-            try {
-                const stateStr = decodeURIComponent(escape(atob(b64)));
-                const parsed = JSON.parse(stateStr);
-                
-                if (parsed && parsed.words && parsed.words.length === 25) {
-                    gameState = parsed;
-                    saveState();
-                    initUIFromState();
-                    
-                    // Очищуємо URL після завантаження, щоб він не заважав
-                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-                    
-                    showToast('✅ Гру успішно синхронізовано з посилання!', 5000);
-                    return true;
-                }
-            } catch (e) {
-                console.error("Помилка синхронізації з URL", e);
-                showToast('❌ Невірне або пошкоджене посилання для синхронізації', 5000);
+        function switchRoomPrompt() {
+            const newRoom = prompt('Введіть назву або код кімнати:', currentRoomId);
+            if (newRoom && newRoom.trim() !== '') {
+                initRoom(newRoom.trim());
+                showToast(`🚪 Перейшли у кімнату: ${newRoom.trim()}`);
             }
-            return false;
         }
 
         let toastTimer = null;
-
         function showToast(msg, duration = 4000) {
             const el = document.getElementById('toast');
             el.textContent = msg;
@@ -762,7 +784,7 @@
         }
 
         // ==========================================
-        // РОБОТА ЗІ СЛОВНИКОМ
+        // СТВОРЕННЯ ГРИ
         // ==========================================
         function fillRandomWords() {
             if (activeWordList.length < 25) {
@@ -772,7 +794,7 @@
             const shuffled = [...activeWordList].sort(() => Math.random() - 0.5);
             const selected = shuffled.slice(0, 25);
             document.getElementById('manual-words').value = selected.join(', ');
-            showToast(`✅ 25 випадкових слів додано! (з ${activeWordList.length})`, 3000);
+            showToast(`✅ 25 випадкових слів додано!`, 3000);
         }
 
         function createGameFromManual() {
@@ -807,19 +829,17 @@
                 currentFontSize: gameState.currentFontSize || 16
             };
             saveState();
-            initUIFromState();
-            showToast('✅ Гра створена!', 3000);
+            renderAllUI();
+            showToast('✅ Нову гру створено і відправлено в кімнату!', 3000);
         }
 
         // ==========================================
-        // РЕНДЕРИНГ
+        // РЕНДЕРИНГ ТА ОБРОБКА КЛІКІВ
         // ==========================================
         function updateWordText(index, newText) {
             let clean = newText.replace(/[^А-Яа-яЄєІіЇїҐґ'’]/gi, '').toUpperCase();
             if (clean.length > 0) gameState.words[index] = clean;
             saveState();
-            renderPlayerBoard();
-            renderProgressPage();
         }
 
         function cycleCaptainColor(index, event) {
@@ -840,9 +860,6 @@
                 }
             }
             saveState();
-            renderCaptainBoard();
-            renderPlayerBoard();
-            updateScoreBoard();
         }
 
         function renderCaptainBoard() {
@@ -860,8 +877,7 @@
                 card.oncontextmenu = (e) => cycleCaptainColor(index, e);
                 card.onblur = () => { updateWordText(index, card.innerText);
                     card.innerText = gameState.words[index]; };
-                card.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault();
-                        card.blur(); } };
+                card.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); card.blur(); } };
                 grid.appendChild(card);
             });
         }
@@ -908,44 +924,41 @@
             document.getElementById('clue-input').value = '';
             document.getElementById('num-input').value = '';
             saveState();
-            renderProgressPage();
             showToast(`🎯 Хід ${gameState.turns.length} — ${teamColor === 'red' ? 'Червоні' : 'Сині'}`);
         }
 
         function handleWordReveal(index) {
             if (gameState.revealed[index]) return;
-            if (gameState.turns.length === 0) { showToast('⚠️ Спочатку почніть хід!', 2500); return; }
+            if (!gameState.turns || gameState.turns.length === 0) { showToast('⚠️ Спочатку почніть хід!', 2500); return; }
             gameState.revealed[index] = true;
             let color = gameState.colors[index];
             if (color === 'grey-bg') gameState.scores.grey--;
             else if (color !== 'black') gameState.scores[color]--;
             let turn = gameState.turns[gameState.activeTurnIndex];
-            if (turn) turn.words.push({ text: gameState.words[index], color });
+            if (turn) {
+                if (!turn.words) turn.words = [];
+                turn.words.push({ text: gameState.words[index], color });
+            }
             saveState();
-            updateScoreBoard();
-            renderPlayerBoard();
-            renderProgressPage();
         }
 
         function deleteTurn(turnIdx) {
             if (!confirm('Видалити цей хід?')) return;
             let turn = gameState.turns[turnIdx];
-            turn.words.forEach(w => {
-                let idx = gameState.words.indexOf(w.text);
-                if (idx !== -1) {
-                    gameState.revealed[idx] = false;
-                    let c = gameState.colors[idx];
-                    if (c === 'grey-bg') gameState.scores.grey++;
-                    else if (c !== 'black') gameState.scores[c]++;
-                }
-            });
+            if (turn.words) {
+                turn.words.forEach(w => {
+                    let idx = gameState.words.indexOf(w.text);
+                    if (idx !== -1) {
+                        gameState.revealed[idx] = false;
+                        let c = gameState.colors[idx];
+                        if (c === 'grey-bg') gameState.scores.grey++;
+                        else if (c !== 'black') gameState.scores[c]++;
+                    }
+                });
+            }
             gameState.turns.splice(turnIdx, 1);
-            if (gameState.activeTurnIndex >= gameState.turns.length) gameState.activeTurnIndex = Math.max(0, gameState
-                .turns.length - 1);
+            if (gameState.activeTurnIndex >= gameState.turns.length) gameState.activeTurnIndex = Math.max(0, gameState.turns.length - 1);
             saveState();
-            updateScoreBoard();
-            renderPlayerBoard();
-            renderProgressPage();
             showToast('🗑️ Хід видалено');
         }
 
@@ -956,7 +969,6 @@
             let newNum = prompt('Нове число:', turn.number);
             if (newNum !== null) turn.number = newNum.trim();
             saveState();
-            renderProgressPage();
         }
 
         function removeWordFromTurn(turnIdx, wordIdx) {
@@ -970,9 +982,6 @@
             }
             gameState.turns[turnIdx].words.splice(wordIdx, 1);
             saveState();
-            updateScoreBoard();
-            renderPlayerBoard();
-            renderProgressPage();
         }
 
         function moveWordInTurn(turnIdx, wordIdx, dir) {
@@ -981,14 +990,13 @@
             if (newIdx < 0 || newIdx >= arr.length) return;
             [arr[wordIdx], arr[newIdx]] = [arr[newIdx], arr[wordIdx]];
             saveState();
-            renderProgressPage();
         }
 
         function renderProgressPage() {
             const logArea = document.getElementById('log-area');
             const wordsGrid = document.getElementById('available-words-grid');
             logArea.innerHTML = '';
-            if (gameState.turns.length === 0) {
+            if (!gameState.turns || gameState.turns.length === 0) {
                 logArea.innerHTML =
                     `<div style="color:#999;text-align:center;font-style:italic;font-size:${gameState.currentFontSize}px;">Тут відображатиметься історія ходів...</div>`;
             } else {
@@ -997,12 +1005,11 @@
                     row.className = 'turn-row';
                     if (gameState.activeTurnIndex === turnIdx) row.classList.add('active-turn');
                     row.onclick = () => { gameState.activeTurnIndex = turnIdx;
-                        saveState();
-                        renderProgressPage(); };
+                        saveState(); };
                     row.style.cursor = 'pointer';
                     let teamColorStyle = turn.team === 'red' ? 'color:#ff0000;' : 'color:#00a8ff;';
                     let numText = turn.number ? ` ${turn.number}` : '';
-                    let wordsHtml = turn.words.map((w, wIdx) => {
+                    let wordsHtml = (turn.words || []).map((w, wIdx) => {
                         let style = '';
                         if (w.color === 'red') style = 'color:#ff0000;';
                         else if (w.color === 'blue') style = 'color:#00a8ff;';
@@ -1051,7 +1058,7 @@
         }
 
         // ==========================================
-        // ФОНИ
+        // АВТОНОМНИЙ THEME MANAGER (ФОНИ)
         // ==========================================
         const bgBaseUrl = 'https://olgazheltvai2.github.io/images/backgrounds/';
         const defaultBgUrl = bgBaseUrl + 'background_1.webp';
@@ -1108,14 +1115,12 @@
         // ІНІЦІАЛІЗАЦІЯ ПРИ СТАРТІ
         // ==========================================
         window.onload = async function() {
-            // Спочатку перевіряємо, чи немає даних у URL для синхронізації
-            const loadedFromUrl = loadStateFromUrl();
+            // Отримуємо код кімнати з URL чи створюємо випадковий
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomFromUrl = urlParams.get('room');
+            const targetRoom = roomFromUrl || "room-" + Math.floor(1000 + Math.random() * 9000);
             
-            // Якщо не завантажено з URL, вантажимо зі звичайного localStorage
-            if (!loadedFromUrl) {
-                loadState();
-            }
-            
+            initRoom(targetRoom);
             initThemeManager();
             await loadExtraWords();
             document.getElementById('wordCountDisplay').textContent = activeWordList.length;
