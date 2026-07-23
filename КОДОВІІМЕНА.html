@@ -703,6 +703,9 @@
             currentRoomId = roomId;
             document.getElementById('currentRoomDisplay').textContent = currentRoomId;
             
+            // Зберігаємо поточну кімнату в пам'ять браузера
+            localStorage.setItem('lastRoomId', currentRoomId);
+            
             const url = new URL(window.location.href);
             url.searchParams.set('room', currentRoomId);
             window.history.replaceState({}, '', url.href);
@@ -1115,10 +1118,11 @@
         // ІНІЦІАЛІЗАЦІЯ ПРИ СТАРТІ
         // ==========================================
         window.onload = async function() {
-            // Отримуємо код кімнати з URL чи створюємо випадковий
+            // Отримуємо код кімнати з URL, або з попереднього збереження, чи створюємо випадковий
             const urlParams = new URLSearchParams(window.location.search);
             const roomFromUrl = urlParams.get('room');
-            const targetRoom = roomFromUrl || "room-" + Math.floor(1000 + Math.random() * 9000);
+            const savedRoom = localStorage.getItem('lastRoomId');
+            const targetRoom = roomFromUrl || savedRoom || "room-" + Math.floor(1000 + Math.random() * 9000);
             
             initRoom(targetRoom);
             initThemeManager();
