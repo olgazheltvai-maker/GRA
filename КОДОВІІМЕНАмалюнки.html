@@ -226,6 +226,9 @@
                 if (typeof gameState.activeTurnIndex === 'undefined') gameState.activeTurnIndex = 0;
                 if (!gameState.turns) gameState.turns = [];
                 
+                // Примусовий перерахунок при завантаженні (щоб уникнути undefined від старих ігор)
+                recalculateScores();
+                
                 document.getElementById('score-board').style.display = 'block';
                 updateScoreBoard();
                 if(!isPlayer) {
@@ -481,11 +484,12 @@
         }
 
         function updateScoreBoard() {
-            document.getElementById('score-red').innerText = gameState.scores.red;
-            document.getElementById('score-blue').innerText = gameState.scores.blue;
-            document.getElementById('score-green').innerText = gameState.scores.green;
-            document.getElementById('score-orange').innerText = gameState.scores.orange;
-            document.getElementById('score-black').innerText = gameState.scores.black;
+            // Додано || 0 як запасний план
+            document.getElementById('score-red').innerText = gameState.scores.red || 0;
+            document.getElementById('score-blue').innerText = gameState.scores.blue || 0;
+            document.getElementById('score-green').innerText = gameState.scores.green || 0;
+            document.getElementById('score-orange').innerText = gameState.scores.orange || 0;
+            document.getElementById('score-black').innerText = gameState.scores.black || 0;
         }
 
         // ==========================================
