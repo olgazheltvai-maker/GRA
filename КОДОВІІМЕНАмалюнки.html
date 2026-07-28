@@ -16,7 +16,7 @@
         /* ====== СТИЛІ ====== */
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; min-height: 100vh; background-color: #f0f2f5; }
-        .game-container { background: rgba(255, 255, 255, 0.92); max-width: 960px; margin: 20px auto; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12); }
+        .game-container { background: rgba(255, 255, 255, 0.92); max-width: 1000px; margin: 20px auto; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12); }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; cursor: pointer; background: #e0e0e0; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; user-select: none; }
         .tab.active { background: #fff; border-color: #aaa; }
@@ -27,9 +27,11 @@
         .room-bar { background: #e1f5fe; border: 1px solid #81d4fa; border-radius: 6px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .room-info { font-size: 16px; font-weight: bold; color: #0277bd; }
         
-        .btn-room { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0288d1; color: white; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
+        .btn-room { padding: 10px 15px; font-size: 15px; cursor: pointer; background: #0288d1; color: white; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
         .btn-manual { background: #ff8c00; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        
         .btn-player-link { background: #00b050 !important; }
+        .btn-captain-link { background: #e67e22 !important; }
         .btn-qr { background: #8e44ad !important; }
 
         .score-board { text-align: center; font-size: 36px; font-weight: bold; margin-bottom: 20px; }
@@ -111,8 +113,9 @@
             <div class="room-info">🔴 Кімната: <span id="currentRoomDisplay">Завантаження...</span></div>
             <div id="room-controls">
                 <button class="btn-room btn-player-link" onclick="copyPlayerLink()">📋 Лінк для гравців</button>
-                <button class="btn-room btn-qr" onclick="showPlayerQR()">📱 QR-код для гравців</button>
-                <button class="btn-room" style="background:#555 !important;" onclick="switchRoomPrompt()">🚪 Змінити кімнату</button>
+                <button class="btn-room btn-qr" onclick="showPlayerQR()">📱 QR-код (гравці)</button>
+                <button class="btn-room btn-captain-link" onclick="copyCaptainLink()">👑 Лінк для 2-го капітана</button>
+                <button class="btn-room" style="background:#555 !important;" onclick="switchRoomPrompt()">🚪 Змінити</button>
             </div>
         </div>
 
@@ -281,7 +284,19 @@
             url.searchParams.set('room', currentRoomId);
             url.searchParams.set('role', 'player');
             navigator.clipboard.writeText(url.href).then(() => {
-                showToast('📋 Лінк для гравців скопійовано! Надішліть його учням у Телеграм.');
+                showToast('📋 Лінк для гравців скопійовано!');
+            }).catch(err => {
+                showToast('❌ Помилка копіювання.');
+            });
+        }
+        
+        // НОВА ФУНКЦІЯ: Копіювання лінка для другого капітана
+        function copyCaptainLink() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('room', currentRoomId);
+            url.searchParams.delete('role'); // Видаляємо role=player, якщо він раптом там є
+            navigator.clipboard.writeText(url.href).then(() => {
+                showToast('👑 Лінк для 2-го капітана скопійовано!');
             }).catch(err => {
                 showToast('❌ Помилка копіювання.');
             });
@@ -484,7 +499,6 @@
         }
 
         function updateScoreBoard() {
-            // Додано || 0 як запасний план
             document.getElementById('score-red').innerText = gameState.scores.red || 0;
             document.getElementById('score-blue').innerText = gameState.scores.blue || 0;
             document.getElementById('score-green').innerText = gameState.scores.green || 0;
