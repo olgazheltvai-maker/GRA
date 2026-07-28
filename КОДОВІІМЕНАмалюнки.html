@@ -60,12 +60,12 @@
         .card-number {
             position: absolute; top: 5px; left: 5px; background: rgba(255,255,255,0.9);
             color: #333; font-weight: bold; padding: 2px 8px; border-radius: 4px;
-            font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 2;
+            font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 5;
         }
         .magnify-icon {
             position: absolute; bottom: 5px; right: 5px; background: rgba(255,255,255,0.9);
             border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; 
-            justify-content: center; font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 2;
+            justify-content: center; font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 5;
         }
         
         /* Кольорові фільтри для розгаданих карток */
@@ -157,9 +157,8 @@
                 <div class="grid" id="player-grid"></div>
             </div>
             
-            <!-- Вкладка "Хід гри" з відновленою кнопкою скріншоту -->
             <div id="progress-page" class="page">
-                <div class="progress-controls">
+                <div class="progress-controls" id="progress-controls">
                     <input type="text" id="clue-input" placeholder="Підказка" style="width:45%;">
                     <input type="number" id="num-input" placeholder="Число" style="width:80px;" min="1" max="9">
                     <button onclick="startNewTurn()">Почати хід</button>
@@ -209,8 +208,12 @@
         let currentRoomId = "default-room";
         let roomRef = null;
         
+        // Визначаємо ролі
         const urlParams = new URLSearchParams(window.location.search);
-        const isPlayer = urlParams.get('role') === 'player';
+        const currentRole = urlParams.get('role');
+        const isPlayer = currentRole === 'player';
+        const isCoCaptain = currentRole === 'captain'; // Нова роль для читання без редагування
+        const isHost = !isPlayer && !isCoCaptain; // Головний капітан
 
         let gameState = {
             images: [],
@@ -224,7 +227,8 @@
         let pendingImages = [];
 
         function saveState() {
-            if (db && roomRef && !isPlayer) {
+            // Тільки головний капітан може зберігати зміни в базу
+            if (db && roomRef && isHost) {
                 roomRef.set(gameState);
             }
         }
@@ -238,7 +242,8 @@
                 
                 document.getElementById('score-board').style.display = 'block';
                 updateScoreBoard();
-                if(!isPlayer) {
+                
+                if (!isPlayer) {
                     renderCaptainBoard();
                     renderProgressPage();
                 }
@@ -272,6 +277,7 @@
             }
         }
 
+        // Керування інтерфейсом залежно від ролі
         if (isPlayer) {
             document.getElementById('main-tabs').style.display = 'none';
             document.getElementById('setup-section').style.display = 'none';
@@ -279,6 +285,9 @@
             document.getElementById('progress-page').style.display = 'none';
             document.getElementById('room-controls').style.display = 'none';
             document.getElementById('player-page').classList.add('active');
+        } else if (isCoCaptain) {
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('room-controls').style.display = 'none';
         }
 
         function copyPlayerLink() {
@@ -295,9 +304,9 @@
         function copyCaptainLink() {
             const url = new URL(window.location.href);
             url.searchParams.set('room', currentRoomId);
-            url.searchParams.delete('role'); 
+            url.searchParams.set('role', 'captain'); // Роль безпечного капітана
             navigator.clipboard.writeText(url.href).then(() => {
-                showToast('👑 Лінк для 2-го капітана скопійовано!');
+                showToast('👑 Безпечний лінк для 2-го капітана скопійовано!');
             }).catch(err => {
                 showToast('❌ Помилка копіювання.');
             });
@@ -349,7 +358,6 @@
             element.classList.add('active');
         }
 
-        // ВІДНОВЛЕНА ФУНКЦІЯ СКРІНШОТІВ
         async function copyScreenshotToClipboard(elementId) {
             const element = document.getElementById(elementId);
             const originalBg = element.style.background;
@@ -407,6 +415,7 @@
         }
 
         function createGameFromImages() {
+            if (!isHost) return;
             if (pendingImages.length < 25) {
                 showToast(`⚠️ Потрібно 25 картинок, а завантажено ${pendingImages.length}.`);
                 return;
@@ -435,7 +444,7 @@
         }
 
         function cycleCaptainColor(index, event) {
-            if(isPlayer) return;
+            if (!isHost) return;
             event.preventDefault();
             const order = ['red', 'blue', 'green', 'orange', 'grey-bg', 'black'];
             let cur = gameState.colors[index];
@@ -467,12 +476,39 @@
                 let colorClass = gameState.colors[index] === 'grey-bg' ? 'color-grey-bg' : `color-${gameState.colors[index]}`;
                 card.className = `word-card revealed ${colorClass}`; 
                 card.style.backgroundImage = `url(${imgSrc})`;
-                card.oncontextmenu = (e) => cycleCaptainColor(index, e);
+                
+                // Тільки головний капітан може змінювати кольори
+                if (isHost) {
+                    card.oncontextmenu = (e) => cycleCaptainColor(index, e);
+                    card.title = "Лівий клік — збільшити. Правий клік — змінити колір.";
+                } else {
+                    card.title = "Лівий клік — збільшити.";
+                }
+                
+                // Будь-який капітан тепер може просто клікнути, щоб збільшити картинку
+                card.onclick = () => openModal(imgSrc);
+                
+                let overlayHtml = `<div class="color-overlay"></div>`;
+                let checkmarkHtml = '';
+                
+                // Якщо картка розгадана, показуємо це візуально
+                if (gameState.revealed[index]) {
+                    card.style.opacity = '0.35'; 
+                    checkmarkHtml = `<div style="position:absolute; font-size:40px; z-index:3; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">✅</div>`;
+                }
                 
                 card.innerHTML = `
                     <div class="card-number">${index + 1}</div>
-                    <div class="color-overlay"></div>
+                    ${overlayHtml}
+                    ${checkmarkHtml}
                 `;
+                
+                // Додаємо іконку лупи для зрозумілості
+                let mag = document.createElement('div');
+                mag.className = 'magnify-icon';
+                mag.innerText = '🔍';
+                card.appendChild(mag);
+                
                 grid.appendChild(card);
             });
         }
@@ -500,7 +536,8 @@
                     ${overlayHtml}
                 `;
 
-                if (isPlayer) {
+                // Безпечні капітани теж не можуть відкривати картки
+                if (isPlayer || isCoCaptain) {
                     card.onclick = () => openModal(imgSrc);
                 } else {
                     card.onclick = () => handleReveal(index);
@@ -523,6 +560,7 @@
         }
 
         function startNewTurn() {
+            if (!isHost) return;
             let clue = document.getElementById('clue-input').value.trim().toUpperCase();
             let num = document.getElementById('num-input').value.trim();
             if (!clue) { showToast('⚠️ Введіть підказку!', 2000); return; }
@@ -536,7 +574,7 @@
         }
 
         function handleReveal(index) {
-            if (isPlayer || gameState.revealed[index]) return;
+            if (!isHost || gameState.revealed[index]) return;
             if (!gameState.turns || gameState.turns.length === 0) { showToast('⚠️ Спочатку почніть хід у вкладці "Хід гри"!', 2500); return; }
             
             gameState.revealed[index] = true;
@@ -553,7 +591,7 @@
         }
 
         function deleteTurn(turnIdx) {
-            if (!confirm('Видалити цей хід?')) return;
+            if (!isHost || !confirm('Видалити цей хід?')) return;
             let turn = gameState.turns[turnIdx];
             if (turn.items) {
                 turn.items.forEach(item => {
@@ -567,6 +605,7 @@
         }
 
         function editTurnInfo(turnIdx) {
+            if (!isHost) return;
             let turn = gameState.turns[turnIdx];
             let newClue = prompt('Нова підказка:', turn.clue);
             if (newClue !== null && newClue.trim() !== '') turn.clue = newClue.trim().toUpperCase();
@@ -576,6 +615,7 @@
         }
 
         function removeWordFromTurn(turnIdx, itemIdx) {
+            if (!isHost) return;
             let itemObj = gameState.turns[turnIdx].items[itemIdx];
             gameState.revealed[itemObj.index] = false;
             gameState.turns[turnIdx].items.splice(itemIdx, 1);
@@ -586,6 +626,13 @@
         function renderProgressPage() {
             const logArea = document.getElementById('log-area');
             logArea.innerHTML = '';
+            
+            // Ховаємо елементи управління від Безпечного капітана
+            const controls = document.getElementById('progress-controls');
+            if (controls) {
+                controls.style.display = isHost ? 'flex' : 'none';
+            }
+
             if (!gameState.turns || gameState.turns.length === 0) {
                 logArea.innerHTML = `<div style="color:#999;text-align:center;font-style:italic;">Тут відображатиметься історія ходів...</div>`;
             } else {
@@ -593,8 +640,12 @@
                     let row = document.createElement('div');
                     row.className = 'turn-row';
                     if (gameState.activeTurnIndex === turnIdx) row.classList.add('active-turn');
-                    row.onclick = () => { gameState.activeTurnIndex = turnIdx; saveState(); };
-                    row.style.cursor = 'pointer';
+                    
+                    if (isHost) {
+                        row.onclick = () => { gameState.activeTurnIndex = turnIdx; saveState(); };
+                        row.style.cursor = 'pointer';
+                    }
+                    
                     let teamColorStyle = turn.team === 'red' ? 'color:#ff0000;' : 'color:#00a8ff;';
                     let numText = turn.number ? ` ${turn.number}` : '';
                     
@@ -607,20 +658,25 @@
                         if (item.color === 'orange') borderColor = '#ff8c00';
                         if (item.color === 'grey-bg') borderColor = '#a6a6a6';
                         
+                        let delBtn = isHost ? `<span class="turn-word-ctrl del" title="Скасувати відкриття цієї картки" onclick="event.stopPropagation(); removeWordFromTurn(${turnIdx},${iIdx})">✖</span>` : '';
+                        
                         return `<div class="turn-word-tag">
                                     <div style="width:40px; height:40px; background-image:url(${imgSrc}); background-size:cover; border: 3px solid ${borderColor}; border-radius:4px;"></div>
                                     <span style="font-weight:bold;">№${item.index + 1}</span>
-                                    <span class="turn-word-ctrl del" title="Скасувати відкриття цієї картки" onclick="event.stopPropagation(); removeWordFromTurn(${turnIdx},${iIdx})">✖</span>
+                                    ${delBtn}
                                 </div>`;
                     }).join('');
 
                     let activeLabel = (gameState.activeTurnIndex === turnIdx) ? '<span style="font-size:12px;color:#666;margin-left:auto;">(Активно)</span>' : '';
                     
+                    let editBtn = isHost ? `<button class="turn-action-btn" title="Редагувати підказку" onclick="event.stopPropagation(); editTurnInfo(${turnIdx})">✎</button>` : '';
+                    let delTurnBtn = isHost ? `<button class="turn-action-btn del" title="Видалити весь хід" onclick="event.stopPropagation(); deleteTurn(${turnIdx})">✖</button>` : '';
+                    
                     row.innerHTML = `
                             <div class="turn-clue-container">
                                 <span class="turn-clue" style="${teamColorStyle}">${turn.clue}${numText}:</span>
-                                <button class="turn-action-btn" title="Редагувати підказку" onclick="event.stopPropagation(); editTurnInfo(${turnIdx})">✎</button>
-                                <button class="turn-action-btn del" title="Видалити весь хід" onclick="event.stopPropagation(); deleteTurn(${turnIdx})">✖</button>
+                                ${editBtn}
+                                ${delTurnBtn}
                             </div>
                             <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">${itemsHtml}</div>
                             ${activeLabel}
