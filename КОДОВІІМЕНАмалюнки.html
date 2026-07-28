@@ -45,11 +45,13 @@
         .color-orange { color: #ff8c00; }
         .color-black-score { background-color: #000; color: #fff; padding: 0 10px; border-radius: 5px; }
 
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         
         /* Картки зображень */
         .word-card {
-            background-color: #fff; border: 2px solid #ddd; border-radius: 8px; 
+            background-color: #fff; 
+            border: 5px solid #ddd; /* Базова сіра рамка */
+            border-radius: 8px; 
             height: 120px; display: flex; align-items: center; justify-content: center;
             cursor: pointer; user-select: none; transition: transform 0.1s;
             position: relative; background-size: cover; background-position: center;
@@ -57,31 +59,48 @@
         }
         .word-card:active { transform: scale(0.97); }
         
+        /* Номери карток (базові та кольорові) */
         .card-number {
             position: absolute; top: 5px; left: 5px; background: rgba(255,255,255,0.9);
-            color: #333; font-weight: bold; padding: 2px 8px; border-radius: 4px;
-            font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 5;
+            color: #555; font-weight: bold; padding: 2px 8px; border-radius: 4px;
+            font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 5;
         }
+        
+        /* Стилі для командних карток (Кольорова обводка і номер) */
+        .team-red { border-color: #ff0000; }
+        .team-red .card-number { color: #ff0000; font-size: 17px; }
+        
+        .team-blue { border-color: #00a8ff; }
+        .team-blue .card-number { color: #00a8ff; font-size: 17px; }
+        
+        .team-green { border-color: #00b050; }
+        .team-green .card-number { color: #00b050; font-size: 17px; }
+        
+        .team-orange { border-color: #ff8c00; }
+        .team-orange .card-number { color: #ff8c00; font-size: 17px; }
+        
+        .team-black { border-color: #000000; }
+        .team-black .card-number { color: #000000; font-size: 17px; }
+        
+        .team-grey-bg { border-color: #888888; }
+        .team-grey-bg .card-number { color: #555555; font-size: 17px; }
+
         .magnify-icon {
             position: absolute; bottom: 5px; right: 5px; background: rgba(255,255,255,0.9);
             border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; 
             justify-content: center; font-size: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 5;
         }
         
-        /* Кольорові фільтри для розгаданих карток */
-        .color-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; display: none; }
-        .word-card.revealed .color-overlay { display: flex; }
-        
-        .color-red .color-overlay { background-color: rgba(255, 0, 0, 0.7); }
-        .color-blue .color-overlay { background-color: rgba(0, 168, 255, 0.7); }
-        .color-green .color-overlay { background-color: rgba(0, 176, 80, 0.7); }
-        .color-orange .color-overlay { background-color: rgba(255, 140, 0, 0.7); }
-        
-        .color-grey-bg .color-overlay { background-color: rgba(166, 166, 166, 0.85); align-items: center; justify-content: center; }
-        
-        /* Чорна картка тепер має іконку черепа */
-        .color-black .color-overlay { background-color: rgba(0, 0, 0, 0.9); align-items: center; justify-content: center; }
-        .color-black .color-overlay::after { content: "☠️"; font-size: 50px; }
+        /* Напівпрозорий хрестик для розгаданих карток */
+        .cross-overlay { 
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(255, 255, 255, 0.4); 
+            display: none; align-items: center; justify-content: center; 
+            font-size: 80px; z-index: 3; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+        }
+        .word-card.revealed .cross-overlay { display: flex; }
+        .cross-overlay::after { content: "❌"; opacity: 0.6; }
+        .team-black.revealed .cross-overlay::after { content: "☠️"; opacity: 0.8; }
 
         /* Стилі для ходу гри */
         .progress-controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
@@ -124,8 +143,7 @@
         </div>
 
         <div class="tabs" id="main-tabs">
-            <div class="tab active" onclick="switchTab('captain-page', this)">Капітанська табличка</div>
-            <div class="tab" onclick="switchTab('player-page', this)">Табличка гравців</div>
+            <div class="tab active" onclick="switchTab('captain-page', this)">Ігрове поле</div>
             <div class="tab" id="progress-tab" onclick="switchTab('progress-page', this)">Хід гри</div>
         </div>
 
@@ -157,6 +175,7 @@
                 <div class="grid" id="player-grid"></div>
             </div>
             
+            <!-- Вкладка "Хід гри" -->
             <div id="progress-page" class="page">
                 <div class="progress-controls" id="progress-controls">
                     <input type="text" id="clue-input" placeholder="Підказка" style="width:45%;">
@@ -212,8 +231,8 @@
         const urlParams = new URLSearchParams(window.location.search);
         const currentRole = urlParams.get('role');
         const isPlayer = currentRole === 'player';
-        const isCoCaptain = currentRole === 'captain'; // Нова роль для читання без редагування
-        const isHost = !isPlayer && !isCoCaptain; // Головний капітан
+        const isCoCaptain = currentRole === 'captain';
+        const isHost = !isPlayer && !isCoCaptain; 
 
         let gameState = {
             images: [],
@@ -227,7 +246,6 @@
         let pendingImages = [];
 
         function saveState() {
-            // Тільки головний капітан може зберігати зміни в базу
             if (db && roomRef && isHost) {
                 roomRef.set(gameState);
             }
@@ -243,11 +261,13 @@
                 document.getElementById('score-board').style.display = 'block';
                 updateScoreBoard();
                 
+                // Рендеримо потрібне поле залежно від ролі
                 if (!isPlayer) {
                     renderCaptainBoard();
                     renderProgressPage();
+                } else {
+                    renderPlayerBoard();
                 }
-                renderPlayerBoard();
             }
         }
 
@@ -304,7 +324,7 @@
         function copyCaptainLink() {
             const url = new URL(window.location.href);
             url.searchParams.set('room', currentRoomId);
-            url.searchParams.set('role', 'captain'); // Роль безпечного капітана
+            url.searchParams.set('role', 'captain'); 
             navigator.clipboard.writeText(url.href).then(() => {
                 showToast('👑 Безпечний лінк для 2-го капітана скопійовано!');
             }).catch(err => {
@@ -473,40 +493,36 @@
             grid.innerHTML = '';
             gameState.images.forEach((imgSrc, index) => {
                 let card = document.createElement('div');
-                let colorClass = gameState.colors[index] === 'grey-bg' ? 'color-grey-bg' : `color-${gameState.colors[index]}`;
-                card.className = `word-card revealed ${colorClass}`; 
-                card.style.backgroundImage = `url(${imgSrc})`;
                 
-                // Тільки головний капітан може змінювати кольори
-                if (isHost) {
-                    card.oncontextmenu = (e) => cycleCaptainColor(index, e);
-                    card.title = "Лівий клік — збільшити. Правий клік — змінити колір.";
-                } else {
-                    card.title = "Лівий клік — збільшити.";
+                // Капітан одразу бачить всі кольори (рамки і номери)
+                let colorClass = `team-${gameState.colors[index]}`;
+                card.className = `word-card ${colorClass}`; 
+                
+                if (gameState.revealed[index]) {
+                    card.classList.add('revealed');
+                    card.style.opacity = '0.4'; // Тьмяніє після відкриття
                 }
                 
-                // Будь-який капітан тепер може просто клікнути, щоб збільшити картинку
-                card.onclick = () => openModal(imgSrc);
+                card.style.backgroundImage = `url(${imgSrc})`;
                 
-                let overlayHtml = `<div class="color-overlay"></div>`;
-                let checkmarkHtml = '';
-                
-                // Якщо картка розгадана, показуємо це візуально
-                if (gameState.revealed[index]) {
-                    card.style.opacity = '0.35'; 
-                    checkmarkHtml = `<div style="position:absolute; font-size:40px; z-index:3; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">✅</div>`;
+                if (isHost) {
+                    card.oncontextmenu = (e) => cycleCaptainColor(index, e);
+                    card.onclick = () => handleReveal(index);
+                    card.title = "Лівий клік — розгадати. Правий клік — змінити колір.";
+                } else {
+                    card.onclick = () => openModal(imgSrc);
+                    card.title = "Лівий клік — збільшити.";
                 }
                 
                 card.innerHTML = `
                     <div class="card-number">${index + 1}</div>
-                    ${overlayHtml}
-                    ${checkmarkHtml}
+                    <div class="cross-overlay"></div>
                 `;
                 
-                // Додаємо іконку лупи для зрозумілості
                 let mag = document.createElement('div');
                 mag.className = 'magnify-icon';
                 mag.innerText = '🔍';
+                mag.onclick = (e) => { e.stopPropagation(); openModal(imgSrc); };
                 card.appendChild(mag);
                 
                 grid.appendChild(card);
@@ -521,32 +537,26 @@
                 card.className = 'word-card';
                 card.style.backgroundImage = `url(${imgSrc})`;
                 
-                let overlayHtml = '';
+                // Гравці бачать колір ТІЛЬКИ після розгадування
                 if (gameState.revealed[index]) {
-                    let c = gameState.colors[index];
-                    card.classList.add('revealed');
-                    if (c === 'black') card.classList.add('color-black');
-                    else if (c === 'grey-bg') card.classList.add('color-grey-bg');
-                    else card.classList.add(`color-${c}`);
-                    overlayHtml = `<div class="color-overlay"></div>`;
+                    let colorClass = `team-${gameState.colors[index]}`;
+                    card.classList.add(colorClass, 'revealed');
+                    card.style.opacity = '0.4'; // Також тьмяніє
                 }
                 
                 card.innerHTML = `
                     <div class="card-number">${index + 1}</div>
-                    ${overlayHtml}
+                    <div class="cross-overlay"></div>
                 `;
 
-                // Безпечні капітани теж не можуть відкривати картки
-                if (isPlayer || isCoCaptain) {
-                    card.onclick = () => openModal(imgSrc);
-                } else {
-                    card.onclick = () => handleReveal(index);
-                    let mag = document.createElement('div');
-                    mag.className = 'magnify-icon';
-                    mag.innerText = '🔍';
-                    mag.onclick = (e) => { e.stopPropagation(); openModal(imgSrc); };
-                    card.appendChild(mag);
-                }
+                card.onclick = () => openModal(imgSrc);
+                
+                let mag = document.createElement('div');
+                mag.className = 'magnify-icon';
+                mag.innerText = '🔍';
+                mag.onclick = (e) => { e.stopPropagation(); openModal(imgSrc); };
+                card.appendChild(mag);
+                
                 grid.appendChild(card);
             });
         }
@@ -627,7 +637,6 @@
             const logArea = document.getElementById('log-area');
             logArea.innerHTML = '';
             
-            // Ховаємо елементи управління від Безпечного капітана
             const controls = document.getElementById('progress-controls');
             if (controls) {
                 controls.style.display = isHost ? 'flex' : 'none';
