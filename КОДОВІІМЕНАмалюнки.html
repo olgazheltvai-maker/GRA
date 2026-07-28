@@ -37,7 +37,7 @@
         .color-blue { color: #00a8ff; }
         .color-green { color: #00b050; }
         .color-orange { color: #ff8c00; }
-        .color-grey-bg { background-color: #a6a6a6 !important; color: #000 !important; }
+        .color-black-score { background-color: #000; color: #fff; padding: 0 10px; border-radius: 5px; }
 
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         
@@ -135,9 +135,9 @@
         <div id="capture-board">
             <div class="score-board" id="score-board" style="display:none;">
                 <span id="score-red" class="color-red">9</span> : <span id="score-blue" class="color-blue">9</span>
-                <span id="score-grey" class="color-grey-bg" style="padding:0 10px; border-radius:5px; margin-left: 15px;">4</span> : 
-                <span id="score-green" class="color-green">1</span> : 
-                <span id="score-orange" class="color-orange">1</span>
+                <span id="score-green" class="color-green" style="margin-left: 15px;">1</span> : 
+                <span id="score-orange" class="color-orange">1</span> :
+                <span id="score-black" class="color-black-score">1</span>
             </div>
             
             <div id="captain-page" class="page active">
@@ -208,7 +208,7 @@
             images: [],
             colors: [],
             revealed: [],
-            scores: { red: 9, blue: 9, grey: 4, green: 1, orange: 1 },
+            scores: { red: 9, blue: 9, green: 1, orange: 1, black: 1 },
             turns: [],
             activeTurnIndex: 0
         };
@@ -290,9 +290,8 @@
             url.searchParams.set('role', 'player');
             
             const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = ''; // Очищаємо попередній QR-код
+            qrContainer.innerHTML = ''; 
             
-            // Генеруємо новий QR-код
             new QRCode(qrContainer, {
                 text: url.href,
                 width: 250,
@@ -388,7 +387,7 @@
                 images: pendingImages.slice(0, 25),
                 colors: colors,
                 revealed: Array(25).fill(false),
-                scores: { red: 9, blue: 9, grey: 4, green: 1, orange: 1 },
+                scores: { red: 9, blue: 9, green: 1, orange: 1, black: 1 },
                 turns: [],
                 activeTurnIndex: 0
             };
@@ -413,7 +412,7 @@
         }
 
         function recalculateScores() {
-            gameState.scores = { red: 0, blue: 0, grey: 0, green: 0, orange: 0 };
+            gameState.scores = { red: 0, blue: 0, green: 0, orange: 0, black: 0 };
             for (let i = 0; i < 25; i++) {
                 if (!gameState.revealed[i]) {
                     let c = gameState.colors[i];
@@ -421,7 +420,7 @@
                     else if (c === 'blue') gameState.scores.blue++;
                     else if (c === 'green') gameState.scores.green++;
                     else if (c === 'orange') gameState.scores.orange++;
-                    else if (c === 'grey-bg') gameState.scores.grey++;
+                    else if (c === 'black') gameState.scores.black++;
                 }
             }
         }
@@ -484,9 +483,9 @@
         function updateScoreBoard() {
             document.getElementById('score-red').innerText = gameState.scores.red;
             document.getElementById('score-blue').innerText = gameState.scores.blue;
-            document.getElementById('score-grey').innerText = gameState.scores.grey;
             document.getElementById('score-green').innerText = gameState.scores.green;
             document.getElementById('score-orange').innerText = gameState.scores.orange;
+            document.getElementById('score-black').innerText = gameState.scores.black;
         }
 
         // ==========================================
